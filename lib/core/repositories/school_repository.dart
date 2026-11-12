@@ -51,6 +51,8 @@ abstract class SchoolRepository {
 
   Future<String> regenerateClassCode(String classSectionId);
 
+  Future<void> deleteClassSection(String classSectionId);
+
   // --- Attendance ---
   Future<List<Attendance>> getAttendanceForDate(
     String classSectionId,
@@ -146,6 +148,8 @@ abstract class SchoolRepository {
 
   Future<void> createAnnouncement(Announcement announcement);
 
+  Future<void> deleteAnnouncement(String announcementId);
+
   // --- Staff & Teachers ---
   Future<Map<String, dynamic>?> loginStaff({
     required String loginCode,
@@ -162,6 +166,7 @@ abstract class SchoolRepository {
     String? homeroomClassName,
     String? subjectName,
     String? subjectCode,
+    List<String>? teachingClassIds,
   });
 
   Future<List<Map<String, dynamic>>> getTeacherSubjectAllocations(

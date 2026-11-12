@@ -675,6 +675,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 ? '${cls.grade}-${cls.section}'
                 : '${cls.grade}';
 
+            final teacherDisplay = (cls.classTeacherName != null &&
+                    cls.classTeacherName!.trim().isNotEmpty)
+                ? cls.classTeacherName!
+                : 'None';
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: BentoCard(
@@ -761,15 +766,15 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          // Middle Tier: Class Teacher name ('Class Teacher: ...')
+                          // Middle Tier: Class in Charge name ('Class in Charge: ...')
                           Text(
-                            'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
+                            'Class in Charge: $teacherDisplay',
                             style: AppTypography.bodySmall.copyWith(
                               color: AppColors.inkSecondary,
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Bottom Tier: Join code badge (with ticket icon) + 'View Roster' button
+                          // Bottom Tier: Join code badge (with ticket icon) + 'View Roster' & Delete buttons
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -800,19 +805,38 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                   ],
                                 ),
                               ),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedClassFilterId = cls.id;
-                                    _selectedNavIndex = 1;
-                                  });
-                                },
-                                icon: const Icon(LucideIcons.users, size: 14),
-                                label: const Text('View Roster'),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: () => _confirmDeleteClass(cls),
+                                    icon: const Icon(LucideIcons.trash2,
+                                        size: 14, color: AppColors.danger),
+                                    label: const Text('Delete'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.danger,
+                                      side: const BorderSide(
+                                          color: Color(0xFFFCA5A5)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 8),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedClassFilterId = cls.id;
+                                        _selectedNavIndex = 1;
+                                      });
+                                    },
+                                    icon: const Icon(LucideIcons.users, size: 14),
+                                    label: const Text('View Roster'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -870,7 +894,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
+                                  'Class in Charge: $teacherDisplay',
                                   style: AppTypography.caption,
                                 ),
                               ],
@@ -939,6 +963,20 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                   horizontal: 12, vertical: 8),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          // Delete Class button
+                          OutlinedButton.icon(
+                            onPressed: () => _confirmDeleteClass(cls),
+                            icon: const Icon(LucideIcons.trash2,
+                                size: 14, color: AppColors.danger),
+                            label: const Text('Delete Class'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.danger,
+                              side: const BorderSide(color: Color(0xFFFCA5A5)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -946,6 +984,73 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           }),
       ],
     );
+  }
+
+  Future<void> _confirmDeleteClass(ClassSection cls) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(LucideIcons.trash2,
+                  color: AppColors.danger, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Delete Class'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete ${cls.displayName}? This will remove all student links and timetables for this class.',
+          style: AppTypography.bodySmall,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(schoolRepositoryProvider).deleteClassSection(cls.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${cls.displayName} deleted successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          await _loadAdminData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete class: $e'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _openCreateClassDialog() {
@@ -956,7 +1061,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final codeCtrl = TextEditingController(
       text: _generateClassCode(9, 'A'),
     );
-    final teacherNameCtrl = TextEditingController();
     bool isSubmitting = false;
 
     showDialog(
@@ -1214,20 +1318,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // Optional Homeroom Class Teacher
-                      TextFormField(
-                        controller: teacherNameCtrl,
-                        decoration: InputDecoration(
-                          labelText: 'Homeroom Teacher Name (Optional)',
-                          hintText: 'Enter teacher name',
-                          prefixIcon: const Icon(LucideIcons.user, size: 18),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -1267,7 +1357,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
                           try {
                             final repo = ref.read(schoolRepositoryProvider);
-                            final teacherName = teacherNameCtrl.text.trim();
                             final customName = isCustomName ? customNameCtrl.text.trim() : null;
                             final grade = isCustomName ? 0 : selectedGrade;
 
@@ -1276,9 +1365,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                               grade: grade,
                               section: selectedSection,
                               classCode: code,
-                              classTeacherName: teacherName.isNotEmpty
-                                  ? teacherName
-                                  : null,
                               customName: customName,
                             );
 
@@ -2321,68 +2407,170 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         ),
         const SizedBox(height: 20),
 
-        ..._announcements.map((a) {
-          final isHoliday = a.category == AnnouncementCategory.holiday;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: BentoCard(
-              padding: const EdgeInsets.all(16),
+        if (_announcements.isEmpty)
+          BentoCard(
+            padding: const EdgeInsets.all(32),
+            child: Center(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isHoliday
-                              ? const Color(0xFFFFEDD5)
-                              : AppColors.brandPrimaryLight,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          isHoliday
-                              ? '🏖️ HOLIDAY CIRCULAR'
-                              : '📢 ${a.category.name.toUpperCase()}',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: isHoliday
-                                ? AppColors.coralStreak
-                                : AppColors.brandPrimary,
-                          ),
-                        ),
-                      ),
-                      if (a.isPinned)
-                        const Row(
-                          children: [
-                            Icon(LucideIcons.pin,
-                                size: 14, color: AppColors.coralStreak),
-                            SizedBox(width: 4),
-                            Text('PINNED BANNER',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.coralStreak)),
-                          ],
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(a.title, style: AppTypography.titleMedium),
+                  const Icon(LucideIcons.megaphone,
+                      size: 40, color: AppColors.inkSecondary),
+                  const SizedBox(height: 12),
+                  Text('No Announcements Found',
+                      style: AppTypography.titleMedium),
                   const SizedBox(height: 4),
-                  Text(a.body,
-                      style: AppTypography.bodySmall
-                          .copyWith(color: AppColors.inkSecondary)),
+                  Text(
+                    'Click "+ New Circular" above to post school-wide notices.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
                 ],
               ),
             ),
-          );
-        }),
+          )
+        else
+          ..._announcements.map((a) {
+            final isHoliday = a.category == AnnouncementCategory.holiday;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: BentoCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isHoliday
+                                ? const Color(0xFFFFEDD5)
+                                : AppColors.brandPrimaryLight,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isHoliday
+                                ? '🏖️ HOLIDAY CIRCULAR'
+                                : '📢 ${a.category.name.toUpperCase()}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: isHoliday
+                                  ? AppColors.coralStreak
+                                  : AppColors.brandPrimary,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (a.isPinned) ...[
+                              const Icon(LucideIcons.pin,
+                                  size: 14, color: AppColors.coralStreak),
+                              const SizedBox(width: 4),
+                              const Text('PINNED BANNER',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.coralStreak)),
+                              const SizedBox(width: 12),
+                            ],
+                            IconButton(
+                              icon: const Icon(LucideIcons.trash2,
+                                  size: 16, color: AppColors.danger),
+                              tooltip: 'Delete Announcement',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _confirmDeleteAnnouncement(a),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(a.title, style: AppTypography.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(a.body,
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.inkSecondary)),
+                  ],
+                ),
+              ),
+            );
+          }),
       ],
     );
+  }
+
+  Future<void> _confirmDeleteAnnouncement(Announcement a) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(LucideIcons.trash2,
+                  color: AppColors.danger, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Delete Announcement'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete this announcement?',
+          style: AppTypography.bodySmall,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await ref.read(schoolRepositoryProvider).deleteAnnouncement(a.id);
+        if (mounted) {
+          setState(() {
+            _announcements.removeWhere((item) => item.id == a.id);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Announcement deleted successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete announcement: $e'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _openCreateAnnouncementDialog() {

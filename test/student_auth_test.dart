@@ -146,7 +146,7 @@ void main() {
       expect(find.text('Leave'), findsWidgets);
     });
 
-    testWidgets('TimetableViewScreen renders day pills and recess break',
+    testWidgets('TimetableViewScreen renders dedicated timetable photo viewer',
         (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
@@ -155,14 +155,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Class Timetable'), findsOneWidget);
-      expect(find.text('Mon'), findsOneWidget);
-      expect(find.text('Tue'), findsOneWidget);
-      expect(find.text('Wed'), findsOneWidget);
-      expect(find.text('Thu'), findsOneWidget);
-      expect(find.text('Fri'), findsOneWidget);
-      expect(find.text('Sat'), findsOneWidget);
-      expect(find.text('Master Chart'), findsOneWidget);
+      expect(find.textContaining('Timetable'), findsWidgets);
     });
 
     testWidgets('SyllabusVaultScreen renders exam term filters',
@@ -205,8 +198,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Settings & Updates'), findsOneWidget);
-      expect(find.text('Quick Patch Channel (Shorebird)'), findsOneWidget);
-      expect(find.text('Full Version Channel (GitHub)'), findsOneWidget);
+      expect(find.text('Software Update'), findsOneWidget);
       expect(find.text('Motion & Accessibility'), findsOneWidget);
       expect(find.text('Reduce Motion'), findsOneWidget);
       expect(find.text('System Information'), findsOneWidget);

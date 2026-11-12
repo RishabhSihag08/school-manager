@@ -173,21 +173,21 @@ void main() {
       expect(service.state.availableRelease, isNull);
       expect(service.state.isChecking, isFalse);
     });
-  });
 
-  group('Dual-Layer OTA Shorebird Quick Patch Engine', () {
-    test('initializes Shorebird state safely in non-engine environments', () {
-      final service = OtaUpdateService();
-      expect(service.state.isCheckingShorebird, isFalse);
-      expect(service.state.isShorebirdPatchDownloading, isFalse);
-      expect(service.state.isShorebirdPatchReadyToInstall, isFalse);
-    });
+    test('returns mock release in demo mode when simulateMockIfNotFound is true', () async {
+      final client = MockHttpClient((request) {
+        return http.Response('Not Found', 404);
+      });
 
-    test('checkForShorebirdPatch returns false when engine is not active', () async {
-      final service = OtaUpdateService();
-      final hasPatch = await service.checkForShorebirdPatch();
-      expect(hasPatch, isFalse);
-      expect(service.state.isCheckingShorebird, isFalse);
+      final service = OtaUpdateService(client: client);
+      final release = await service.checkForUpdates(
+        currentVersion: '1.0.0',
+        simulateMockIfNotFound: true,
+      );
+
+      expect(release, isNotNull);
+      expect(release!.version, equals('1.0.1'));
+      expect(service.state.availableRelease, equals(release));
     });
   });
 }

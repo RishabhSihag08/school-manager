@@ -446,6 +446,8 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                       padding: EdgeInsets.all(40),
                       child: Center(child: CircularProgressIndicator()),
                     )
+                  else if (_summary == null && _results.isEmpty)
+                    _buildEmptyResultsState()
                   else ...[
                     // Overall Summary Bento Card
                     if (_summary != null) _buildSummaryBentoCard(_summary!),
@@ -525,6 +527,49 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyResultsState() {
+    return BentoCard(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppColors.secondarySurface,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                LucideIcons.award,
+                size: 40,
+                color: AppColors.inkMuted,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No exam has been taken yet.',
+              textAlign: TextAlign.center,
+              style: AppTypography.titleLarge.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.inkPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Results and official report cards will appear here once published by school administration.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.inkSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

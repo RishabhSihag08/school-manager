@@ -25,14 +25,13 @@ class AppConfig {
   static String get masterKey =>
       dotenv.isInitialized ? (dotenv.env['MASTER_KEY'] ?? 'SirChotuRam') : 'SirChotuRam';
 
-  // Dual-OTA Engine Configuration
-  static const String otaEngineType = 'Dual-Layer (Shorebird + GitHub Releases)';
-  static const String shorebirdAppId = 'school-manager-app';
+  // OTA Engine Configuration
+  static const String otaEngineType = 'GitHub Releases';
   static const String githubOwner = 'RishabhSihag08';
   static const String githubRepo = 'school-manager';
   static const String otaChannel = 'github-releases';
 
-  static String _version = '1.0.5';
+  static String _version = '1.0.6';
   static int _buildNumber = 4;
 
   static String get currentVersion => _version;

@@ -14,25 +14,10 @@ final schoolRepositoryProvider = Provider<SchoolRepository>((ref) {
   return MockSchoolRepository();
 });
 
-/// OTA Update StateNotifier provider (Dual-Layer: Shorebird + GitHub Releases)
+/// OTA Update StateNotifier provider (GitHub Releases)
 final otaUpdateProvider =
     StateNotifierProvider<OtaUpdateService, OtaUpdateState>((ref) {
   return OtaUpdateService();
-});
-
-/// Convenient selector for Shorebird Quick Patch state
-final shorebirdStatusProvider = Provider<Map<String, dynamic>>((ref) {
-  final otaState = ref.watch(otaUpdateProvider);
-  return {
-    'isAvailable': otaState.isShorebirdAvailable,
-    'currentPatch': otaState.currentPatchNumber,
-    'nextPatch': otaState.nextPatchNumber,
-    'isChecking': otaState.isCheckingShorebird,
-    'isPatchAvailable': otaState.isShorebirdPatchAvailable,
-    'isDownloading': otaState.isShorebirdPatchDownloading,
-    'isReadyToInstall': otaState.isShorebirdPatchReadyToInstall,
-    'message': otaState.shorebirdMessage,
-  };
 });
 
 /// Currently active student session (Production: null until authenticated)

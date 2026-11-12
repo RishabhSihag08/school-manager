@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/config/app_config.dart';
+import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/session_service.dart';
@@ -44,8 +45,11 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   // Staff specific
   final _loginCodeController = TextEditingController();
   final _masterKeyController = TextEditingController();
-  String _selectedHomeroom = 'class-8b';
+  String? _selectedHomeroom;
   String _selectedSubject = 'Mathematics';
+  final Set<String> _selectedTeachingClassIds = {};
+  List<ClassSection> _availableClasses = [];
+  bool _isLoadingClasses = false;
   bool _isLoading = false;
 
   static const List<String> _standardSubjects = [
@@ -78,6 +82,25 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   void initState() {
     super.initState();
     _selectedRole = widget.initialRole;
+    _loadClasses();
+  }
+
+  Future<void> _loadClasses() async {
+    setState(() => _isLoadingClasses = true);
+    try {
+      final repo = ref.read(schoolRepositoryProvider);
+      final classes = await repo.getAllClassSections();
+      if (mounted) {
+        setState(() {
+          _availableClasses = classes;
+          _isLoadingClasses = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingClasses = false);
+      }
+    }
   }
 
   @override
@@ -171,10 +194,27 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         }
 
         String? homeroomName;
-        if (_selectedRole == 'teacher') {
-          if (_selectedHomeroom == 'class-8b') homeroomName = 'Class 8-B';
-          if (_selectedHomeroom == 'class-6a') homeroomName = 'Class 6-A';
-          if (_selectedHomeroom == 'class-7c') homeroomName = 'Class 7-C';
+        if (_selectedRole == 'teacher' &&
+            _selectedHomeroom != null &&
+            _selectedHomeroom!.isNotEmpty) {
+          final matched = _availableClasses.cast<ClassSection?>().firstWhere(
+            (c) => c?.id == _selectedHomeroom,
+            orElse: () => null,
+          );
+          if (matched != null) {
+            homeroomName = matched.displayName;
+          }
+        }
+
+        final teachingIds = Set<String>.from(_selectedTeachingClassIds);
+        if (_selectedHomeroom != null && _selectedHomeroom!.isNotEmpty) {
+          teachingIds.add(_selectedHomeroom!);
+        }
+
+        if (_selectedRole == 'teacher' && teachingIds.isEmpty) {
+          _showError('Please select at least one class that you teach');
+          setState(() => _isLoading = false);
+          return;
         }
 
         final staff = await repo.registerStaff(
@@ -183,12 +223,17 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           loginCode: loginCode,
           pin: pin,
           phone: _phoneController.text.trim(),
-          homeroomClassId: _selectedRole == 'teacher' ? _selectedHomeroom : null,
+          homeroomClassId: (_selectedRole == 'teacher' &&
+                  _selectedHomeroom != null &&
+                  _selectedHomeroom!.isNotEmpty)
+              ? _selectedHomeroom
+              : null,
           homeroomClassName: homeroomName,
           subjectName: _selectedRole == 'teacher' ? _selectedSubject : null,
           subjectCode: _selectedRole == 'teacher'
               ? (_subjectCodes[_selectedSubject] ?? 'SUB')
               : null,
+          teachingClassIds: _selectedRole == 'teacher' ? teachingIds.toList() : null,
         );
 
         ref.read(currentStaffProvider.notifier).state = staff;
@@ -593,7 +638,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         ),
         const SizedBox(height: 14),
 
-        _fieldLabel('Homeroom Class Assignment'),
+        _fieldLabel('Class in Charge of'),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -603,20 +648,85 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
             border: Border.all(color: AppColors.cardBorder),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<String?>(
               value: _selectedHomeroom,
               isExpanded: true,
-              items: const [
-                DropdownMenuItem(value: 'class-8b', child: Text('Class 8-B (Code: 8B-K9X2)')),
-                DropdownMenuItem(value: 'class-6a', child: Text('Class 6-A (Code: 6A-M4P1)')),
-                DropdownMenuItem(value: 'class-7c', child: Text('Class 7-C (Code: 7C-Q8W9)')),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    'None (Not in charge of any class)',
+                    style: GoogleFonts.inter(color: AppColors.inkMuted),
+                  ),
+                ),
+                ..._availableClasses.map(
+                  (cls) => DropdownMenuItem<String?>(
+                    value: cls.id,
+                    child: Text('${cls.displayName} (Code: ${cls.classCode})'),
+                  ),
+                ),
               ],
               onChanged: (val) {
-                if (val != null) setState(() => _selectedHomeroom = val);
+                setState(() {
+                  _selectedHomeroom = val;
+                  if (val != null && val.isNotEmpty) {
+                    _selectedTeachingClassIds.add(val);
+                  }
+                });
               },
             ),
           ),
         ),
+        const SizedBox(height: 14),
+
+        _fieldLabel('Which class/es do you teach? *'),
+        const SizedBox(height: 6),
+        if (_isLoadingClasses)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        else if (_availableClasses.isEmpty)
+          Text(
+            'No classes available',
+            style: GoogleFonts.inter(fontSize: 13, color: AppColors.inkMuted),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _availableClasses.map((cls) {
+              final isSelected = _selectedTeachingClassIds.contains(cls.id);
+              return FilterChip(
+                label: Text(cls.displayName),
+                selected: isSelected,
+                selectedColor: AppColors.brandPrimary.withValues(alpha: 0.15),
+                checkmarkColor: AppColors.brandPrimary,
+                backgroundColor: AppColors.secondarySurface,
+                side: BorderSide(
+                  color: isSelected ? AppColors.brandPrimary : AppColors.cardBorder,
+                ),
+                labelStyle: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: isSelected ? AppColors.brandPrimary : AppColors.inkPrimary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedTeachingClassIds.add(cls.id);
+                    } else {
+                      _selectedTeachingClassIds.remove(cls.id);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
         const SizedBox(height: 14),
       ],
 

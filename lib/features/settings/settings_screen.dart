@@ -68,8 +68,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
               const SizedBox(height: 20),
 
-              // Dual-Layer Over-The-Air (OTA) Updates Hub
-              _buildDualOtaHub(otaState, otaService),
+              // Over-The-Air (OTA) Software Update Hub
+              _buildGitHubReleaseCard(otaState, otaService),
 
               const SizedBox(height: 20),
 
@@ -283,226 +283,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildDualOtaHub(OtaUpdateState state, OtaUpdateService service) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // 1. Shorebird Quick In-App Patch Card
-        _buildShorebirdPatchCard(state, service),
-        const SizedBox(height: 16),
-        // 2. Full Version Channel (GitHub Releases)
-        _buildGitHubReleaseCard(state, service),
-      ],
-    );
-  }
-
-  Widget _buildShorebirdPatchCard(
-    OtaUpdateState state,
-    OtaUpdateService service,
-  ) {
-    final patchNum = state.currentPatchNumber;
-    final isReady = state.isShorebirdPatchReadyToInstall;
-    final isAvailable = state.isShorebirdPatchAvailable;
-
-    String badgeText = 'Patch #${patchNum ?? 0} (Active)';
-    Color badgeColor = AppColors.brandPrimary;
-    Color badgeBg = AppColors.brandPrimaryLight;
-
-    if (isReady) {
-      badgeText = 'Restart to Apply ✨';
-      badgeColor = AppColors.success;
-      badgeBg = AppColors.successBg;
-    } else if (isAvailable) {
-      badgeText = 'Patch Available 🔥';
-      badgeColor = AppColors.coralStreak;
-      badgeBg = AppColors.coralLight;
-    }
-
-    return BentoCard(
-      padding: const EdgeInsets.all(20),
-      borderColor: isReady
-          ? AppColors.success
-          : isAvailable
-              ? AppColors.coralStreak
-              : AppColors.cardBorder,
-      borderWidth: (isReady || isAvailable) ? 1.5 : 1.0,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        LucideIcons.zap,
-                        color: AppColors.brandPrimary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Quick Patch Channel (Shorebird)',
-                        style: AppTypography.titleMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  badgeText,
-                  style: GoogleFonts.inter(
-                    color: badgeColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Instant in-app Dart code hotfixes delivered seamlessly without APK re-download.',
-            style: AppTypography.bodySmall,
-          ),
-          if (state.shorebirdMessage != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.secondarySurface,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                state.shorebirdMessage!,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11,
-                  color: AppColors.inkSecondary,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          if (isReady)
-            TactileFeedback(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: AppColors.success,
-                    content: Text('✨ Shorebird patch will activate on next launch!'),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.success,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(LucideIcons.refreshCw, color: Colors.white, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Patch Ready • Restart to Apply',
-                        style: AppTypography.labelLarge.copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else if (isAvailable)
-            TactileFeedback(
-              onTap: state.isShorebirdPatchDownloading
-                  ? null
-                  : () => service.downloadShorebirdPatch(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.brandPrimary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: state.isShorebirdPatchDownloading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          'Download In-App Patch #${state.nextPatchNumber ?? 1}',
-                          style: AppTypography.labelLarge.copyWith(color: Colors.white),
-                        ),
-                ),
-              ),
-            )
-          else
-            TactileFeedback(
-              onTap: state.isCheckingShorebird
-                  ? null
-                  : () => service.checkForShorebirdPatch(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.cardSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.brandPrimary),
-                ),
-                child: Center(
-                  child: state.isCheckingShorebird
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              LucideIcons.zap,
-                              color: AppColors.brandPrimary,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Check for In-App Shorebird Patch',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.brandPrimary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildGitHubReleaseCard(
     OtaUpdateState state,
     OtaUpdateService service,
@@ -538,7 +318,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Full Version Channel (GitHub)',
+                        'Software Update',
                         style: AppTypography.titleMedium,
                       ),
                     ),
@@ -564,12 +344,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            'Channel: GitHub Releases (${AppConfig.githubOwner}/${AppConfig.githubRepo})',
-            style: GoogleFonts.jetBrainsMono(
-              color: AppColors.inkSecondary,
-              fontSize: 11,
-            ),
+          Row(
+            children: [
+              Text(
+                'Current Version: ',
+                style: AppTypography.bodySmall,
+              ),
+              Text(
+                'v${AppConfig.currentVersion}',
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkPrimary,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           if (hasUpdate) ...[
@@ -770,7 +559,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Check for Full Release Now',
+                              'Check for Updates',
                               style: AppTypography.labelMedium.copyWith(
                                 color: AppColors.brandPrimary,
                                 fontWeight: FontWeight.w700,

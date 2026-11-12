@@ -57,6 +57,7 @@ class MockSchoolRepository implements SchoolRepository {
 
   // Clean staff store
   final List<Map<String, dynamic>> _staffList = [];
+  final List<Map<String, dynamic>> _teacherAllocations = [];
 
   MockSchoolRepository() {
     _bootstrapDefaultAdmin();
@@ -248,6 +249,26 @@ class MockSchoolRepository implements SchoolRepository {
       return newCode;
     }
     return '8B-NEW1';
+  }
+
+  @override
+  Future<void> deleteClassSection(String classSectionId) async {
+    _classes.removeWhere((c) => c.id == classSectionId);
+    _students.removeWhere((s) => s.classSectionId == classSectionId);
+    _attendanceRecords.removeWhere((a) => a.classSectionId == classSectionId);
+    _timetable.removeWhere((t) => t.classSectionId == classSectionId);
+    _homeworks.removeWhere((h) => h.classSectionId == classSectionId);
+    _syllabi.removeWhere((s) => s.classSectionId == classSectionId);
+    _examResults.removeWhere((r) => r.classSectionId == classSectionId);
+    _announcements.removeWhere((a) => a.targetClassSectionId == classSectionId);
+    _teacherAllocations.removeWhere((a) => a['class_section_id'] == classSectionId);
+    for (final s in _staffList) {
+      if (s['homeroom_class_id'] == classSectionId) {
+        s['homeroom_class_id'] = null;
+        s['homeroom_class_name'] = null;
+        s['homeroom_class_code'] = null;
+      }
+    }
   }
 
   @override
@@ -500,6 +521,11 @@ class MockSchoolRepository implements SchoolRepository {
   }
 
   @override
+  Future<void> deleteAnnouncement(String announcementId) async {
+    _announcements.removeWhere((a) => a.id == announcementId);
+  }
+
+  @override
   Future<Map<String, dynamic>?> loginStaff({
     required String loginCode,
     required String pin,
@@ -556,22 +582,46 @@ class MockSchoolRepository implements SchoolRepository {
     String? homeroomClassName,
     String? subjectName,
     String? subjectCode,
+    List<String>? teachingClassIds,
   }) async {
     final cleanCode = loginCode.trim().toLowerCase();
+    final staffId = 'staff-${DateTime.now().millisecondsSinceEpoch}';
+    final cleanHomeroomId = (homeroomClassId != null && homeroomClassId.trim().isNotEmpty)
+        ? homeroomClassId.trim()
+        : null;
     final newStaff = {
-      'id': 'staff-${DateTime.now().millisecondsSinceEpoch}',
+      'id': staffId,
       'role': role,
       'login_code': cleanCode,
       'full_name': fullName.trim(),
       'phone': phone?.trim() ?? '',
-      'homeroom_class_id': homeroomClassId,
-      'homeroom_class_name': homeroomClassName,
-      'homeroom_class_code': homeroomClassId != null ? '8B-K9X2' : null,
+      'homeroom_class_id': cleanHomeroomId,
+      'homeroom_class_name': cleanHomeroomId != null ? homeroomClassName : null,
+      'homeroom_class_code': cleanHomeroomId != null ? '8B-K9X2' : null,
       'subject_name': subjectName,
       'subject_code': subjectCode,
       'pin': pin.trim(),
     };
     _staffList.add(newStaff);
+
+    if (teachingClassIds != null && subjectName != null) {
+      for (final cid in teachingClassIds) {
+        final cls = _classes.cast<ClassSection?>().firstWhere(
+          (c) => c?.id == cid,
+          orElse: () => null,
+        );
+        final clsName = cls != null ? 'Class ${cls.grade}-${cls.section}' : cid;
+        _teacherAllocations.add({
+          'teacher_id': staffId,
+          'class_section_id': cid,
+          'class_name': clsName,
+          'subject_name': subjectName,
+          'subject_code': subjectCode ?? 'SUB',
+          'is_homeroom': cid == cleanHomeroomId,
+        });
+      }
+    }
+
     return Map<String, dynamic>.from(newStaff);
   }
 
@@ -579,18 +629,28 @@ class MockSchoolRepository implements SchoolRepository {
   Future<List<Map<String, dynamic>>> getTeacherSubjectAllocations(
     String teacherId,
   ) async {
+    final allocations = _teacherAllocations.where((a) => a['teacher_id'] == teacherId).toList();
+    if (allocations.isNotEmpty) {
+      return allocations.map((a) => Map<String, dynamic>.from(a)).toList();
+    }
     final staff = _staffList.firstWhere(
       (s) => s['id'] == teacherId,
       orElse: () => <String, dynamic>{},
     );
     if (staff.isNotEmpty && staff['subject_name'] != null) {
+      final classId = staff['homeroom_class_id'] ?? (_classes.isNotEmpty ? _classes.first.id : 'class-8b');
+      final cls = _classes.cast<ClassSection?>().firstWhere(
+        (c) => c?.id == classId,
+        orElse: () => null,
+      );
+      final className = staff['homeroom_class_name'] ?? (cls != null ? 'Class ${cls.grade}-${cls.section}' : 'Class 8-B');
       return [
         {
-          'class_section_id': staff['homeroom_class_id'] ?? 'class-8b',
-          'class_name': staff['homeroom_class_name'] ?? 'Class 8-B',
+          'class_section_id': classId,
+          'class_name': className,
           'subject_name': staff['subject_name'],
           'subject_code': staff['subject_code'] ?? 'SUB',
-          'is_homeroom': true,
+          'is_homeroom': staff['homeroom_class_id'] != null,
         }
       ];
     }

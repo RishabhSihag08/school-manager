@@ -416,6 +416,27 @@ class SupabaseSchoolRepository implements SchoolRepository {
     return newCode;
   }
 
+  @override
+  Future<void> deleteClassSection(String classSectionId) async {
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('students').delete().eq('class_section_id', classSectionId);
+        await client.from('attendance').delete().eq('class_section_id', classSectionId);
+        await client.from('timetables').delete().eq('class_section_id', classSectionId);
+        await client.from('homeworks').delete().eq('class_section_id', classSectionId);
+        await client.from('syllabi').delete().eq('class_section_id', classSectionId);
+        await client.from('exam_results').delete().eq('class_section_id', classSectionId);
+        await client.from('subject_allocations').delete().eq('class_section_id', classSectionId);
+        await client.from('announcements').delete().eq('target_class_section_id', classSectionId);
+        await client.from('class_sections').delete().eq('id', classSectionId);
+      } catch (e) {
+        debugPrint('deleteClassSection error: $e');
+      }
+    }
+    await _fallback.deleteClassSection(classSectionId);
+  }
+
   // ==========================================
   // 3. ATTENDANCE
   // ==========================================
@@ -982,6 +1003,19 @@ class SupabaseSchoolRepository implements SchoolRepository {
     await _fallback.createAnnouncement(announcement);
   }
 
+  @override
+  Future<void> deleteAnnouncement(String announcementId) async {
+    final client = _client;
+    if (client != null) {
+      try {
+        await client.from('announcements').delete().eq('id', announcementId);
+      } catch (e) {
+        debugPrint('deleteAnnouncement error: $e');
+      }
+    }
+    await _fallback.deleteAnnouncement(announcementId);
+  }
+
   // ==========================================
   // 9. PROFILES & STAFF
   // ==========================================
@@ -1070,9 +1104,9 @@ class SupabaseSchoolRepository implements SchoolRepository {
             'full_name': fullName,
             'phone': phone,
             'pin': cleanPin,
-            'homeroom_class_id': homeroomClassId ?? 'class-8b',
-            'homeroom_class_name': homeroomClassName ?? 'Class 8-B',
-            'homeroom_class_code': '8B-K9X2',
+            'homeroom_class_id': homeroomClassId,
+            'homeroom_class_name': homeroomClassName,
+            'homeroom_class_code': homeroomClassId != null ? '8B-K9X2' : null,
             'subject_name': subjectName ?? 'Mathematics',
             'subject_code': subjectCode ?? 'MATH',
           };
@@ -1098,10 +1132,14 @@ class SupabaseSchoolRepository implements SchoolRepository {
     String? homeroomClassName,
     String? subjectName,
     String? subjectCode,
+    List<String>? teachingClassIds,
   }) async {
     final cleanCode = loginCode.trim().toLowerCase();
     final client = _client;
     String profileId = _uuid.v4();
+    final cleanHomeroomId = (homeroomClassId != null && homeroomClassId.trim().isNotEmpty)
+        ? homeroomClassId.trim()
+        : null;
 
     if (client != null) {
       try {
@@ -1118,6 +1156,61 @@ class SupabaseSchoolRepository implements SchoolRepository {
         if (res != null && res['id'] != null) {
           profileId = res['id'] as String;
         }
+
+        // If class in charge assigned, set class teacher in class_sections
+        if (cleanHomeroomId != null) {
+          try {
+            await client
+                .from('class_sections')
+                .update({'class_teacher_id': profileId})
+                .eq('id', cleanHomeroomId);
+          } catch (e) {
+            debugPrint('Error assigning class teacher: $e');
+          }
+        }
+
+        // Store subject allocations for all teachingClassIds
+        if (teachingClassIds != null && teachingClassIds.isNotEmpty && subjectName != null) {
+          String? subjectId;
+          try {
+            var subQuery = client.from('subjects').select('id');
+            if (subjectCode != null && subjectCode.trim().isNotEmpty) {
+              subQuery = subQuery.eq('code', subjectCode.trim());
+            } else {
+              subQuery = subQuery.ilike('name', subjectName.trim());
+            }
+            final subRes = await subQuery.maybeSingle();
+            if (subRes != null && subRes['id'] != null) {
+              subjectId = subRes['id'] as String;
+            } else {
+              final newSub = await client.from('subjects').insert({
+                'name': subjectName.trim(),
+                'code': (subjectCode != null && subjectCode.trim().isNotEmpty)
+                    ? subjectCode.trim()
+                    : subjectName.trim().substring(0, min(4, subjectName.trim().length)).toUpperCase(),
+              }).select('id').maybeSingle();
+              if (newSub != null && newSub['id'] != null) {
+                subjectId = newSub['id'] as String;
+              }
+            }
+          } catch (e) {
+            debugPrint('Error finding/creating subject: $e');
+          }
+
+          if (subjectId != null) {
+            for (final cid in teachingClassIds) {
+              try {
+                await client.from('subject_allocations').upsert({
+                  'class_section_id': cid,
+                  'subject_id': subjectId,
+                  'teacher_id': profileId,
+                }, onConflict: 'class_section_id, subject_id');
+              } catch (e) {
+                debugPrint('Error inserting subject allocation for class $cid: $e');
+              }
+            }
+          }
+        }
       } catch (e) {
         debugPrint('registerStaff error: $e');
       }
@@ -1129,9 +1222,9 @@ class SupabaseSchoolRepository implements SchoolRepository {
       'login_code': cleanCode,
       'full_name': fullName.trim(),
       'phone': phone?.trim() ?? '',
-      'homeroom_class_id': homeroomClassId ?? (role == 'teacher' ? 'class-8b' : null),
-      'homeroom_class_name': homeroomClassName ?? (role == 'teacher' ? 'Class 8-B' : null),
-      'homeroom_class_code': role == 'teacher' ? '8B-K9X2' : null,
+      'homeroom_class_id': cleanHomeroomId,
+      'homeroom_class_name': cleanHomeroomId != null ? homeroomClassName : null,
+      'homeroom_class_code': cleanHomeroomId != null ? '8B-K9X2' : null,
       'subject_name': subjectName,
       'subject_code': subjectCode,
       'pin': pin.trim(),
@@ -1144,10 +1237,11 @@ class SupabaseSchoolRepository implements SchoolRepository {
       loginCode: loginCode,
       pin: pin,
       phone: phone,
-      homeroomClassId: homeroomClassId,
+      homeroomClassId: cleanHomeroomId,
       homeroomClassName: homeroomClassName,
       subjectName: subjectName,
       subjectCode: subjectCode,
+      teachingClassIds: teachingClassIds,
     );
 
     return staffMap;
@@ -1187,13 +1281,14 @@ class SupabaseSchoolRepository implements SchoolRepository {
     if (_staffSessionCache.containsKey(teacherId)) {
       final staff = _staffSessionCache[teacherId]!;
       if (staff['subject_name'] != null) {
+        final classId = staff['homeroom_class_id'] ?? 'class-8b';
         return [
           {
-            'class_section_id': staff['homeroom_class_id'] ?? 'class-8b',
-            'class_name': staff['homeroom_class_name'] ?? 'Class 8-B',
+            'class_section_id': classId,
+            'class_name': staff['homeroom_class_name'] ?? 'Class Section',
             'subject_name': staff['subject_name'],
             'subject_code': staff['subject_code'] ?? 'SUB',
-            'is_homeroom': true,
+            'is_homeroom': staff['homeroom_class_id'] != null,
           }
         ];
       }

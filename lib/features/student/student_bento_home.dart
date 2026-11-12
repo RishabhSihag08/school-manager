@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/announcement.dart';
+import '../../core/models/class_section.dart';
 import '../../core/models/exam_result.dart';
 import '../../core/models/homework.dart';
 import '../../core/models/student.dart';
@@ -31,6 +32,8 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
   Announcement? _pinnedAnnouncement;
   double _attendancePct = 92.4;
   ExamStudentSummary? _latestExamSummary;
+  String? _timetableFileUrl;
+  String? _className;
   bool _isLoading = true;
   bool _isBannerDismissed = false;
 
@@ -55,20 +58,25 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
     final pinnedFuture = repo.getPinnedAnnouncement(classSectionId: classId);
     final attPctFuture = repo.getStudentAttendancePercentage(studentId);
     final examFuture = repo.getStudentExamSummary(studentId, 'Half Yearly Examination');
+    final classFuture = repo.getClassSectionById(classId);
 
     final results = await Future.wait([
       homeworkFuture,
       pinnedFuture,
       attPctFuture,
       examFuture,
+      classFuture,
     ]);
 
     if (!mounted) return;
+    final cls = results[4] as ClassSection?;
     setState(() {
       _homeworks = results[0] as List<Homework>;
       _pinnedAnnouncement = results[1] as Announcement?;
       _attendancePct = results[2] as double;
       _latestExamSummary = results[3] as ExamStudentSummary?;
+      _timetableFileUrl = cls?.timetableFileUrl;
+      _className = cls?.displayName;
       _isLoading = false;
     });
   }
@@ -98,8 +106,19 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
   }
 
   void _showAnnouncementsDialog() async {
+    final currentStudent = ref.read(currentStudentProvider);
+    final classId = currentStudent?.classSectionId;
+
     final repo = ref.read(schoolRepositoryProvider);
-    final announcements = await repo.getAnnouncements(grade: 8);
+    final cls = classId != null && classId.isNotEmpty
+        ? await repo.getClassSectionById(classId)
+        : null;
+    final announcements = await repo.getAnnouncements(
+      grade: cls?.grade,
+      classSectionId: classId,
+    );
+    // Sort newest first
+    announcements.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     if (!mounted) return;
 
@@ -108,113 +127,236 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.canvasBackground,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBorder,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.4,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: AppColors.canvasBackground,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('School Announcements', style: AppTypography.headlineSmall),
-                  IconButton(
-                    icon: const Icon(LucideIcons.x, size: 20),
-                    onPressed: () => Navigator.of(context).pop(),
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBorder,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('School Announcements', style: AppTypography.headlineSmall),
+                      IconButton(
+                        icon: const Icon(LucideIcons.x, size: 20),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: announcements.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  LucideIcons.megaphoneOff,
+                                  size: 40,
+                                  color: AppColors.inkMuted,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No announcements published yet',
+                                  style: AppTypography.titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Official notices from the school administration will appear here.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.bodySmall,
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: announcements.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final ann = announcements[index];
+                              return BentoCard(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: ann.category == AnnouncementCategory.holiday
+                                                ? AppColors.coralLight
+                                                : AppColors.brandPrimaryLight,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            ann.category.label,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: ann.category == AnnouncementCategory.holiday
+                                                  ? AppColors.coralStreak
+                                                  : AppColors.brandPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          DateFormat('dd MMM yyyy, hh:mm a').format(ann.createdAt),
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 11,
+                                            color: AppColors.inkSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(ann.title, style: AppTypography.titleMedium),
+                                    const SizedBox(height: 4),
+                                    Text(ann.body, style: AppTypography.bodySmall),
+                                    if (ann.attachments.isNotEmpty) ...[
+                                      const SizedBox(height: 10),
+                                      TactileFeedback(
+                                        onTap: () {
+                                          UnifiedMediaViewer.show(context, items: ann.attachments);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.secondarySurface,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(LucideIcons.paperclip, size: 14),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                ann.attachments.first.title,
+                                                style: AppTypography.labelSmall,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              ...announcements.map((ann) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: BentoCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: ann.category == AnnouncementCategory.holiday
-                                    ? AppColors.coralLight
-                                    : AppColors.brandPrimaryLight,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                ann.category.label,
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: ann.category == AnnouncementCategory.holiday
-                                      ? AppColors.coralStreak
-                                      : AppColors.brandPrimary,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              DateFormat('MMM d').format(ann.createdAt),
-                              style: AppTypography.bodySmall,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(ann.title, style: AppTypography.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(ann.body, style: AppTypography.bodySmall),
-                        if (ann.attachments.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          TactileFeedback(
-                            onTap: () {
-                              UnifiedMediaViewer.show(context, items: ann.attachments);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.secondarySurface,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(LucideIcons.paperclip, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    ann.attachments.first.title,
-                                    style: AppTypography.labelSmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Future<void> _openTimetable() async {
+    final currentStudent = ref.read(currentStudentProvider);
+    final classId = currentStudent?.classSectionId;
+
+    String? url = _timetableFileUrl;
+    String? className = _className;
+
+    if (url == null || url.isEmpty) {
+      if (classId != null && classId.isNotEmpty) {
+        final repo = ref.read(schoolRepositoryProvider);
+        final cls = await repo.getClassSectionById(classId);
+        url = cls?.timetableFileUrl;
+        className = cls?.displayName;
+        if (mounted) {
+          setState(() {
+            _timetableFileUrl = url;
+            _className = className;
+          });
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    if (url != null && url.isNotEmpty) {
+      UnifiedMediaViewer.show(
+        context,
+        items: [
+          MediaAttachmentItem(
+            title: className != null ? '$className Timetable' : 'Class Timetable',
+            url: url,
+            type: 'image',
+          ),
+        ],
+      );
+    } else {
+      _showNoTimetableDialog();
+    }
+  }
+
+  void _showNoTimetableDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(LucideIcons.calendarOff, color: AppColors.brandPrimary, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              'No Timetable Uploaded Yet',
+              style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: Text(
+          'The school administration has not uploaded the timetable photo for your class yet.',
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.inkSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Okay',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w700,
+                color: AppColors.brandPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -711,58 +853,130 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
           child: BentoCard(
             padding: const EdgeInsets.all(16),
             onTap: () => context.push(AppRoutes.studentResults),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(8),
+            child: _latestExamSummary != null
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPrimaryLight,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              LucideIcons.award,
+                              color: AppColors.brandPrimary,
+                              size: 16,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPrimaryLight,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Grade ${_latestExamSummary!.overallGrade}',
+                              style: GoogleFonts.inter(
+                                color: AppColors.brandPrimary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        LucideIcons.award,
-                        color: AppColors.brandPrimary,
-                        size: 16,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Grade ${_latestExamSummary?.overallGrade ?? "A1"}',
-                        style: GoogleFonts.inter(
-                          color: AppColors.brandPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                      const SizedBox(height: 14),
+                      Text(
+                        '${_latestExamSummary!.percentage.toStringAsFixed(1)}%',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.inkPrimary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  '${_latestExamSummary?.percentage.toStringAsFixed(1) ?? "88.4"}%',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.inkPrimary,
+                      const SizedBox(height: 2),
+                      Text('Exam Hub', style: AppTypography.titleSmall),
+                      Text(
+                        _latestExamSummary!.examName,
+                        style: AppTypography.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondarySurface,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              LucideIcons.award,
+                              color: AppColors.inkMuted,
+                              size: 16,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondarySurface,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Pending',
+                              style: GoogleFonts.inter(
+                                color: AppColors.inkMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(
+                            LucideIcons.fileQuestion,
+                            size: 18,
+                            color: AppColors.inkMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'No exam has been taken yet.',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.inkPrimary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text('Exam Hub', style: AppTypography.titleSmall),
+                      Text('Tap to check results', style: AppTypography.bodySmall),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text('Exam Hub', style: AppTypography.titleSmall),
-                Text('Half-Yearly Result', style: AppTypography.bodySmall),
-              ],
-            ),
           ),
         ),
       ],
@@ -776,7 +990,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
           child: _academicPill(
             label: 'Timetable',
             icon: LucideIcons.calendar,
-            onTap: () => context.push(AppRoutes.studentTimetable),
+            onTap: _openTimetable,
           ),
         ),
         const SizedBox(width: 8),

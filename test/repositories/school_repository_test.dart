@@ -99,6 +99,23 @@ void main() {
       expect(allocations.first['subject_name'], 'Physics');
     });
 
+    test('Announcement creation and deletion', () async {
+      final ann = Announcement(
+        id: 'test-ann-1',
+        title: 'Sports Day Notice',
+        body: 'Sports day will be held on Friday.',
+        category: AnnouncementCategory.classNotice,
+        createdAt: DateTime.now(),
+      );
+      await mockRepo.createAnnouncement(ann);
+      var list = await mockRepo.getAnnouncements();
+      expect(list.any((a) => a.id == 'test-ann-1'), isTrue);
+
+      await mockRepo.deleteAnnouncement('test-ann-1');
+      list = await mockRepo.getAnnouncements();
+      expect(list.any((a) => a.id == 'test-ann-1'), isFalse);
+    });
+
     test('Attendance recording and percentage calculation', () async {
       final today = DateTime.now();
       await mockRepo.submitClassAttendance(
@@ -201,7 +218,7 @@ void main() {
     });
 
     test('ClassSection customName displays correctly and serializes to/from JSON', () {
-      final customClass = ClassSection(
+      const customClass = ClassSection(
         id: 'nursery-a',
         grade: 0,
         section: 'A',

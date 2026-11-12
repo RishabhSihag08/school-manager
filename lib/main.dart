@@ -51,7 +51,7 @@ class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp> {
     // Restore session state into Riverpod providers
     SessionService.restoreSession(ref);
 
-    // Dual-layer OTA startup check (Shorebird Quick Patch + GitHub Releases)
+    // OTA startup check (GitHub Releases)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runStartupOtaChecks();
     });
@@ -60,13 +60,7 @@ class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp> {
   Future<void> _runStartupOtaChecks() async {
     final otaNotifier = ref.read(otaUpdateProvider.notifier);
 
-    // 1. Shorebird in-app quick patch check & silent download
-    final hasPatch = await otaNotifier.checkForShorebirdPatch();
-    if (hasPatch && mounted) {
-      await otaNotifier.downloadShorebirdPatch();
-    }
-
-    // 2. GitHub Releases full APK release check
+    // GitHub Releases full APK release check
     // If a new version exists, show mandatory update gate before using the app
     final release = await otaNotifier.checkForUpdates(simulateMockIfNotFound: false);
     if (release != null && mounted) {
