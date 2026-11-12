@@ -9,6 +9,7 @@ class ClassSection {
   final bool isCodeLocked;
   final String academicYear;
   final String? timetableFileUrl;
+  final String? customName;
 
   const ClassSection({
     required this.id,
@@ -20,9 +21,20 @@ class ClassSection {
     this.isCodeLocked = false,
     this.academicYear = '2026-2027',
     this.timetableFileUrl,
+    this.customName,
   });
 
-  String get displayName => 'Class $grade-$section';
+  String get displayName {
+    if (customName != null && customName!.trim().isNotEmpty) {
+      final name = customName!.trim();
+      if (section.trim().isNotEmpty &&
+          !name.toLowerCase().endsWith(section.trim().toLowerCase())) {
+        return '$name-${section.trim()}';
+      }
+      return name;
+    }
+    return 'Class $grade-$section';
+  }
 
   ClassSection copyWith({
     String? id,
@@ -34,6 +46,7 @@ class ClassSection {
     bool? isCodeLocked,
     String? academicYear,
     String? timetableFileUrl,
+    String? customName,
   }) {
     return ClassSection(
       id: id ?? this.id,
@@ -45,6 +58,7 @@ class ClassSection {
       isCodeLocked: isCodeLocked ?? this.isCodeLocked,
       academicYear: academicYear ?? this.academicYear,
       timetableFileUrl: timetableFileUrl ?? this.timetableFileUrl,
+      customName: customName ?? this.customName,
     );
   }
 
@@ -59,6 +73,7 @@ class ClassSection {
       isCodeLocked: json['is_code_locked'] as bool? ?? false,
       academicYear: json['academic_year'] as String? ?? '2026-2027',
       timetableFileUrl: json['timetable_file_url'] as String?,
+      customName: json['custom_name'] as String?,
     );
   }
 
@@ -71,6 +86,7 @@ class ClassSection {
         'class_code': classCode,
         'is_code_locked': isCodeLocked,
         'academic_year': academicYear,
+        'custom_name': customName,
         if (timetableFileUrl != null) 'timetable_file_url': timetableFileUrl,
       };
 }

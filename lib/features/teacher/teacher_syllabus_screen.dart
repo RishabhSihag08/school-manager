@@ -332,7 +332,7 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
                   controller: titleCtrl,
                   decoration: InputDecoration(
                     labelText: 'Chapter Name *',
-                    hintText: 'e.g. Chapter 3: Practical Geometry',
+                    hintText: 'Enter chapter name',
                     filled: true,
                     fillColor: AppColors.canvasBackground,
                     border: OutlineInputBorder(
@@ -347,7 +347,7 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'Exam Weightage (Marks)',
-                    hintText: 'e.g. 10',
+                    hintText: 'Enter marks weightage',
                     suffixText: 'Marks',
                     filled: true,
                     fillColor: AppColors.canvasBackground,
@@ -363,7 +363,7 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Key Topics & Subtopics',
-                    hintText: 'e.g. Angle sum property, types of quadrilaterals, theorem 3.1',
+                    hintText: 'Enter key topics and subtopics',
                     filled: true,
                     fillColor: AppColors.canvasBackground,
                     border: OutlineInputBorder(
@@ -774,7 +774,7 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
           TextField(
             controller: _titleController,
             decoration: InputDecoration(
-              hintText: 'e.g. Half Yearly Examination Syllabus (${widget.subjectName})',
+              hintText: 'Enter syllabus title (${widget.subjectName})',
               prefixIcon: const Icon(LucideIcons.fileText, size: 18, color: AppColors.inkMuted),
               filled: true,
               fillColor: AppColors.secondarySurface,

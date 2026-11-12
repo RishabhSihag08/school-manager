@@ -13,7 +13,8 @@ import '../../core/widgets/tactile_feedback.dart';
 import '../../core/widgets/unified_media_viewer.dart';
 
 class TimetableViewScreen extends ConsumerStatefulWidget {
-  const TimetableViewScreen({super.key});
+  final String? classSectionId;
+  const TimetableViewScreen({super.key, this.classSectionId});
 
   @override
   ConsumerState<TimetableViewScreen> createState() =>
@@ -24,6 +25,8 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
   late int _selectedDayOfWeek; // 1 = Mon .. 6 = Sat
   List<TimetablePeriod> _periods = [];
   bool _isLoading = true;
+  String? _className;
+  String? _timetableFileUrl;
 
   final List<({int dayIndex, String shortName, String fullName})> _days = const [
     (dayIndex: 1, shortName: 'Mon', fullName: 'Monday'),
@@ -45,14 +48,17 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
 
   Future<void> _loadTimetable() async {
     final currentStudent = ref.read(currentStudentProvider);
-    final classId = currentStudent?.classSectionId ?? 'class-8b';
+    final classId = widget.classSectionId ?? currentStudent?.classSectionId ?? 'class-8b';
 
     final repo = ref.read(schoolRepositoryProvider);
+    final cls = await repo.getClassSectionById(classId);
     final list = await repo.getTimetableForDay(classId, _selectedDayOfWeek);
 
     if (!mounted) return;
     setState(() {
       _periods = list;
+      _className = cls?.displayName;
+      _timetableFileUrl = cls?.timetableFileUrl;
       _isLoading = false;
     });
   }
@@ -69,11 +75,14 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
   void _openMasterChartViewer() {
     UnifiedMediaViewer.show(
       context,
-      items: const [
+      items: [
         MediaAttachmentItem(
-          title: 'Class 8-B Master Timetable (Academic Year 2026-27)',
-          url:
-              'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200',
+          title: _className != null
+              ? '$_className Master Timetable (2026-27)'
+              : 'Master Timetable (2026-27)',
+          url: (_timetableFileUrl != null && _timetableFileUrl!.isNotEmpty)
+              ? _timetableFileUrl!
+              : 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200',
           type: 'image',
           sizeKb: 650,
         ),

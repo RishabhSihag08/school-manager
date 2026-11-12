@@ -350,7 +350,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 controller: titleCtrl,
                 decoration: InputDecoration(
                   labelText: 'Notice Title',
-                  hintText: 'e.g. Bring Science project models tomorrow',
+                  hintText: 'Enter notice title',
                   filled: true,
                   fillColor: AppColors.canvasBackground,
                   border: OutlineInputBorder(

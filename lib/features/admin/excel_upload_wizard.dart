@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
+import '../../core/models/class_section.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/excel_service.dart';
@@ -37,6 +38,8 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
   String _selectedExamName = 'Half Yearly Examination';
   String _selectedClassId = 'class-8b';
   String _selectedClassName = 'Class 8-B';
+  List<ClassSection> _classes = [];
+  bool _isLoadingClasses = false;
   double _maxMarks = 100.0;
   bool _isGeneratingTemplate = false;
   Uint8List? _lastGeneratedBytes;
@@ -60,6 +63,36 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
   @override
   void initState() {
     super.initState();
+    _loadClasses();
+  }
+
+  Future<void> _loadClasses() async {
+    setState(() => _isLoadingClasses = true);
+    try {
+      final repo = ref.read(schoolRepositoryProvider);
+      final list = await repo.getAllClassSections();
+      if (mounted) {
+        setState(() {
+          _classes = list;
+          _isLoadingClasses = false;
+          if (_classes.isNotEmpty) {
+            final match = _classes.any((c) => c.id == _selectedClassId);
+            if (!match) {
+              _selectedClassId = _classes.first.id;
+              _selectedClassName = _classes.first.displayName;
+            } else {
+              final found =
+                  _classes.firstWhere((c) => c.id == _selectedClassId);
+              _selectedClassName = found.displayName;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingClasses = false);
+      }
+    }
   }
 
   // ==========================================
@@ -555,23 +588,29 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
     );
   }
 
-  Widget _buildStepBreadcrumbs() {
+  Widget _buildStepBreadcrumbs() => _buildStepHeader();
+
+  Widget _buildStepHeader() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder),
       ),
-      child: Row(
-        children: [
-          _stepChip(0, 'Step 1', 'Download Template', LucideIcons.download),
-          _stepDivider(),
-          _stepChip(1, 'Step 2', 'Upload Excel', LucideIcons.uploadCloud),
-          _stepDivider(),
-          _stepChip(2, 'Step 3', 'Validate & Publish', LucideIcons.checkSquare),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _stepChip(0, 'Step 1', 'Download Template', LucideIcons.download),
+            _stepDivider(),
+            _stepChip(1, 'Step 2', 'Upload Excel', LucideIcons.uploadCloud),
+            _stepDivider(),
+            _stepChip(2, 'Step 3', 'Validate & Publish', LucideIcons.checkSquare),
+          ],
+        ),
       ),
     );
   }
@@ -598,52 +637,53 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
       iconColor = AppColors.success;
     }
 
-    return Expanded(
-      child: TactileFeedback(
-        onTap: () {
-          if (index <= _currentStep || _parsedResult != null) {
-            setState(() => _currentStep = index);
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: border),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(isDone ? LucideIcons.check : icon,
-                      size: 14, color: iconColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    stepNo,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+    return TactileFeedback(
+      onTap: () {
+        if (index <= _currentStep || _parsedResult != null) {
+          setState(() => _currentStep = index);
+        }
+      },
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 130),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isDone ? LucideIcons.check : icon,
+                    size: 14, color: iconColor),
+                const SizedBox(width: 4),
+                Text(
+                  stepNo,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
                   ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? AppColors.inkPrimary : AppColors.inkMuted,
                 ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isActive ? AppColors.inkPrimary : AppColors.inkMuted,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -716,6 +756,7 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
               Text('Select Examination', style: AppTypography.titleSmall),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _selectedExamId,
                 decoration: InputDecoration(
                   filled: true,
@@ -728,19 +769,23 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                 items: const [
                   DropdownMenuItem(
                     value: 'exam-ut1',
-                    child: Text('Unit Test 1 (Max: 50)'),
+                    child: Text('Unit Test 1 (Max: 50)',
+                        overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-half-yearly',
-                    child: Text('Half Yearly Examination (Max: 100)'),
+                    child: Text('Half Yearly Examination (Max: 100)',
+                        overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-ut2',
-                    child: Text('Unit Test 2 (Max: 50)'),
+                    child: Text('Unit Test 2 (Max: 50)',
+                        overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-finals',
-                    child: Text('Annual Final Examination (Max: 100)'),
+                    child: Text('Annual Final Examination (Max: 100)',
+                        overflow: TextOverflow.ellipsis),
                   ),
                 ],
                 onChanged: (val) {
@@ -769,46 +814,79 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
               const SizedBox(height: 16),
 
               // Class Section Selection
-              Text('Select Class & Section', style: AppTypography.titleSmall),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Select Class & Section',
+                      style: AppTypography.titleSmall),
+                  if (_isLoadingClasses)
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedClassId,
+              InputDecorator(
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.canvasBackground,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppColors.cardBorder),
                   ),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'class-8b',
-                    child: Text('Class 8-B (Class Teacher: Ramesh Sharma)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'class-6a',
-                    child: Text('Class 6-A (Class Teacher: Sunita Rao)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'class-7c',
-                    child: Text('Class 7-C (Class Teacher: Vikram Singh)'),
-                  ),
-                ],
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() {
-                      _selectedClassId = val;
-                      if (val == 'class-8b') {
-                        _selectedClassName = 'Class 8-B';
-                      } else if (val == 'class-6a') {
-                        _selectedClassName = 'Class 6-A';
-                      } else {
-                        _selectedClassName = 'Class 7-C';
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: _classes.any((c) => c.id == _selectedClassId)
+                        ? _selectedClassId
+                        : (_classes.isNotEmpty ? _classes.first.id : null),
+                    items: _classes.isEmpty
+                        ? [
+                            DropdownMenuItem<String>(
+                              value: _selectedClassId,
+                              child: Text(
+                                _selectedClassName,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ]
+                        : _classes.map((cls) {
+                            final teacherText = cls.classTeacherName != null &&
+                                    cls.classTeacherName!.trim().isNotEmpty
+                                ? ' (Class Teacher: ${cls.classTeacherName})'
+                                : ' (Class Teacher: Unassigned)';
+                            return DropdownMenuItem<String>(
+                              value: cls.id,
+                              child: Text(
+                                '${cls.displayName}$teacherText',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        final found = _classes.firstWhere(
+                          (c) => c.id == val,
+                          orElse: () => ClassSection(
+                            id: val,
+                            grade: 8,
+                            section: 'B',
+                            classCode: '',
+                          ),
+                        );
+                        setState(() {
+                          _selectedClassId = val;
+                          _selectedClassName = found.displayName;
+                        });
                       }
-                    });
-                  }
-                },
+                    },
+                  ),
+                ),
               ),
 
               const SizedBox(height: 20),

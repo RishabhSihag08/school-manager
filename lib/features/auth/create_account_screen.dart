@@ -36,7 +36,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _phoneController = TextEditingController();
 
   // Student specific
-  final _classCodeController = TextEditingController(text: '8B-K9X2');
+  final _classCodeController = TextEditingController();
   final _rollController = TextEditingController();
   final _admissionController = TextEditingController();
   final _parentNameController = TextEditingController();
@@ -449,7 +449,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       const SizedBox(height: 6),
       _inputContainer(
         controller: _classCodeController,
-        hint: 'e.g. 8B-K9X2',
+        hint: 'Enter class join code',
         icon: LucideIcons.hash,
         textCapitalization: TextCapitalization.characters,
       ),
@@ -540,7 +540,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       const SizedBox(height: 6),
       _inputContainer(
         controller: _nameController,
-        hint: isTeacher ? 'e.g. Mrs. Priya Sharma' : 'e.g. Principal Office / Admin',
+        hint: isTeacher ? 'Enter teacher name' : 'Enter admin name',
         icon: isTeacher ? LucideIcons.userCheck : LucideIcons.shieldCheck,
       ),
       const SizedBox(height: 14),
@@ -549,7 +549,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       const SizedBox(height: 6),
       _inputContainer(
         controller: _loginCodeController,
-        hint: isTeacher ? 'e.g. priya or T-PRIYA' : 'e.g. admin or ADMIN-01',
+        hint: isTeacher ? 'Enter teacher login code' : 'Enter admin login code',
         icon: LucideIcons.hash,
       ),
       const SizedBox(height: 14),

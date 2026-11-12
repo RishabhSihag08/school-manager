@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,6 +46,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   String _selectedClassFilterId = 'all';
   String _studentSearchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  String? _selectedTimetableClassId;
 
   @override
   void initState() {
@@ -80,6 +82,12 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         _announcements.addAll(announcements);
         _allStudents.clear();
         _allStudents.addAll(allStudents);
+        if (_selectedTimetableClassId == null ||
+            !_classes.any((c) => c.id == _selectedTimetableClassId)) {
+          if (_classes.isNotEmpty) {
+            _selectedTimetableClassId = _classes.first.id;
+          }
+        }
         _isLoading = false;
       });
     }
@@ -104,12 +112,21 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     }
   }
 
-  String _generateClassCode(int grade, String section) {
+  String _generateClassCode(
+    int grade,
+    String section, {
+    String? customName,
+  }) {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     final rnd = Random();
     final suffix = String.fromCharCodes(
       Iterable.generate(4, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
     );
+    if (customName != null && customName.trim().isNotEmpty) {
+      final clean = customName.trim().replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+      final prefix = clean.length > 3 ? clean.substring(0, 3) : clean;
+      return '$prefix-$suffix';
+    }
     return '$grade${section.toUpperCase()}-$suffix';
   }
 
@@ -119,6 +136,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     required String section,
     required String classCode,
     String? classTeacherName,
+    String? customName,
   }) async {
     try {
       return await repo.createClassSection(
@@ -126,6 +144,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         section: section,
         classCode: classCode,
         classTeacherName: classTeacherName,
+        customName: customName,
       );
     } catch (_) {}
 
@@ -164,6 +183,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       if (classTeacherName != null && classTeacherName.isNotEmpty) {
         insertData['class_teacher_name'] = classTeacherName;
       }
+      if (customName != null && customName.isNotEmpty) {
+        insertData['custom_name'] = customName;
+      }
 
       final res = await client
           .from('class_sections')
@@ -173,12 +195,16 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       return ClassSection.fromJson(res);
     }
 
+    final prefix = (customName != null && customName.trim().isNotEmpty)
+        ? customName.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')
+        : 'class-$grade';
     final newClass = ClassSection(
-      id: 'class-$grade${section.toLowerCase()}-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      id: '$prefix${section.toLowerCase()}-${DateTime.now().millisecondsSinceEpoch % 10000}',
       grade: grade,
       section: section.toUpperCase(),
       classTeacherName: classTeacherName,
       classCode: classCode.toUpperCase(),
+      customName: customName,
       academicYear: AppConfig.currentAcademicYear,
     );
     return newClass;
@@ -253,9 +279,13 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           : AppBar(
               backgroundColor: AppColors.canvasBackground,
               elevation: 0,
-              title: Text('School Manager Admin', style: AppTypography.titleLarge),
+              title: Text('Admin Console', style: AppTypography.titleLarge),
               actions: [
-                _buildLogoutButton(isCompact: true),
+                IconButton(
+                  icon: const Icon(LucideIcons.logOut, color: AppColors.danger),
+                  tooltip: 'Log Out',
+                  onPressed: () => _confirmLogout(context),
+                ),
                 IconButton(
                   icon: const Icon(LucideIcons.settings,
                       color: AppColors.inkPrimary),
@@ -542,18 +572,21 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   // VIEW 1: CLASSES & SECTIONS
   // ==========================================
   Widget _buildClassesAndSectionsView() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
+        if (isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Classes & Sections Management',
                       style: AppTypography.headlineSmall),
+                  const SizedBox(height: 4),
                   Text(
                     'Manage Class Join Codes, Homeroom Teachers, and Student Enrollment Rosters',
                     style: AppTypography.bodySmall
@@ -561,21 +594,55 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: _openCreateClassDialog,
-              icon: const Icon(LucideIcons.plus, size: 16),
-              label: const Text('+ Create New Class / Section'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandPrimary,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton.icon(
+                  onPressed: _openCreateClassDialog,
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('+ Create New Class / Section'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Classes & Sections Management',
+                        style: AppTypography.headlineSmall),
+                    Text(
+                      'Manage Class Join Codes, Homeroom Teachers, and Student Enrollment Rosters',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.inkSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _openCreateClassDialog,
+                icon: const Icon(LucideIcons.plus, size: 16),
+                label: const Text('+ Create New Class / Section'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                ),
+              ),
+            ],
+          ),
         const SizedBox(height: 20),
 
         if (_classes.isEmpty)
@@ -604,133 +671,276 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             final classStudents =
                 _allStudents.where((s) => s.classSectionId == cls.id).toList();
 
+            final badgeText = cls.section.trim().isNotEmpty
+                ? '${cls.grade}-${cls.section}'
+                : '${cls.grade}';
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: BentoCard(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${cls.grade}-${cls.section}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: AppColors.brandPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
+                padding: const EdgeInsets.all(16),
+                child: isMobile
+                    ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Top Tier: Avatar (50x50) + Class Name + Student count badge + Lock status chip on right
                           Row(
                             children: [
-                              Text(cls.displayName,
-                                  style: AppTypography.titleMedium),
-                              const SizedBox(width: 10),
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandPrimaryLight,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    badgeText,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: AppColors.brandPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        cls.displayName,
+                                        style: AppTypography.titleMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.canvasBackground,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                            color: AppColors.cardBorder),
+                                      ),
+                                      child: Text(
+                                        '${classStudents.length} Students',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.inkSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.canvasBackground,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border:
-                                      Border.all(color: AppColors.cardBorder),
+                                  color: cls.isCodeLocked
+                                      ? const Color(0xFFFEF3C7)
+                                      : const Color(0xFFD1FAE5),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '${classStudents.length} Students',
-                                  style: GoogleFonts.plusJakartaSans(
+                                  cls.isCodeLocked ? 'Locked' : 'Open',
+                                  style: GoogleFonts.jetBrainsMono(
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.inkSecondary,
+                                    fontWeight: FontWeight.bold,
+                                    color: cls.isCodeLocked
+                                        ? AppColors.warning
+                                        : AppColors.success,
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 10),
+                          // Middle Tier: Class Teacher name ('Class Teacher: ...')
                           Text(
                             'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
-                            style: AppTypography.caption,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.inkSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Bottom Tier: Join code badge (with ticket icon) + 'View Roster' button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.canvasBackground,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border:
+                                      Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(LucideIcons.ticket,
+                                        size: 14,
+                                        color: AppColors.brandPrimary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      cls.classCode,
+                                      style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.inkPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedClassFilterId = cls.id;
+                                    _selectedNavIndex = 1;
+                                  });
+                                },
+                                icon: const Icon(LucideIcons.users, size: 14),
+                                label: const Text('View Roster'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ),
-                    // Join Code Pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.canvasBackground,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: Row(
+                      )
+                    : Row(
                         children: [
-                          const Icon(LucideIcons.ticket,
-                              size: 14, color: AppColors.brandPrimary),
-                          const SizedBox(width: 6),
-                          Text(
-                            cls.classCode,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.inkPrimary,
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPrimaryLight,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Center(
+                              child: Text(
+                                badgeText,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.brandPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(cls.displayName,
+                                        style: AppTypography.titleMedium),
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.canvasBackground,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border:
+                                            Border.all(color: AppColors.cardBorder),
+                                      ),
+                                      child: Text(
+                                        '${classStudents.length} Students',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.inkSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
+                                  style: AppTypography.caption,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Join Code Pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.canvasBackground,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppColors.cardBorder),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(LucideIcons.ticket,
+                                    size: 14, color: AppColors.brandPrimary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  cls.classCode,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.inkPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Lock status chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: cls.isCodeLocked
+                                  ? const Color(0xFFFEF3C7)
+                                  : const Color(0xFFD1FAE5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              cls.isCodeLocked ? 'Locked' : 'Open',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: cls.isCodeLocked
+                                    ? AppColors.warning
+                                    : AppColors.success,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // View Roster quick button
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _selectedClassFilterId = cls.id;
+                                _selectedNavIndex = 1;
+                              });
+                            },
+                            icon: const Icon(LucideIcons.users, size: 14),
+                            label: const Text('View Roster'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Lock status chip
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: cls.isCodeLocked
-                            ? const Color(0xFFFEF3C7)
-                            : const Color(0xFFD1FAE5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        cls.isCodeLocked ? 'Locked' : 'Open',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: cls.isCodeLocked
-                              ? AppColors.warning
-                              : AppColors.success,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // View Roster quick button
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _selectedClassFilterId = cls.id;
-                          _selectedNavIndex = 1;
-                        });
-                      },
-                      icon: const Icon(LucideIcons.users, size: 14),
-                      label: const Text('View Roster'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             );
           }),
@@ -739,8 +949,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   }
 
   void _openCreateClassDialog() {
+    bool isCustomName = false;
     int selectedGrade = 9;
     String selectedSection = 'A';
+    final customNameCtrl = TextEditingController();
     final codeCtrl = TextEditingController(
       text: _generateClassCode(9, 'A'),
     );
@@ -782,93 +994,193 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Select grade (1st to 12th), section letter, unique class join code, and optional homeroom teacher.',
+                        'Select grade (1st to 12th) or create a custom class name (Nursery, Prep, Commerce, Arts).',
                         style: AppTypography.bodySmall
                             .copyWith(color: AppColors.inkSecondary),
                       ),
                       const SizedBox(height: 16),
 
-                      // Grade & Section Selectors using InputDecorator + DropdownButton to avoid deprecation warnings
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'Grade / Standard *',
-                                prefixIcon: const Icon(LucideIcons.graduationCap,
-                                    size: 18),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<int>(
-                                  value: selectedGrade,
-                                  isExpanded: true,
-                                  items: List.generate(12, (index) {
-                                    final g = index + 1;
-                                    return DropdownMenuItem<int>(
-                                      value: g,
-                                      child: Text('Class $g'),
-                                    );
-                                  }),
-                                  onChanged: isSubmitting
-                                      ? null
-                                      : (val) {
-                                          if (val != null) {
-                                            setDialogState(() {
-                                              selectedGrade = val;
-                                              codeCtrl.text = _generateClassCode(
-                                                  selectedGrade, selectedSection);
-                                            });
-                                          }
-                                        },
-                                ),
-                              ),
-                            ),
+                      // Format Toggle: Standard Grade vs Custom Class Name
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment<bool>(
+                            value: false,
+                            label: Text('Standard Grade'),
+                            icon: Icon(LucideIcons.graduationCap, size: 16),
                           ),
-                          const SizedBox(width: 12),
-                          // Section Selector
-                          SizedBox(
-                            width: 120,
-                            child: InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'Section *',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedSection,
-                                  isExpanded: true,
-                                  items: ['A', 'B', 'C', 'D', 'E', 'F']
-                                      .map((sec) => DropdownMenuItem(
-                                            value: sec,
-                                            child: Text('Sec $sec'),
-                                          ))
-                                      .toList(),
-                                  onChanged: isSubmitting
-                                      ? null
-                                      : (val) {
-                                          if (val != null) {
-                                            setDialogState(() {
-                                              selectedSection = val;
-                                              codeCtrl.text = _generateClassCode(
-                                                  selectedGrade, selectedSection);
-                                            });
-                                          }
-                                        },
-                                ),
-                              ),
-                            ),
+                          ButtonSegment<bool>(
+                            value: true,
+                            label: Text('Custom Class Name'),
+                            icon: Icon(LucideIcons.sparkles, size: 16),
                           ),
                         ],
+                        selected: {isCustomName},
+                        onSelectionChanged: isSubmitting
+                            ? null
+                            : (Set<bool> newSelection) {
+                                setDialogState(() {
+                                  isCustomName = newSelection.first;
+                                  codeCtrl.text = _generateClassCode(
+                                    selectedGrade,
+                                    selectedSection,
+                                    customName: isCustomName ? customNameCtrl.text : null,
+                                  );
+                                });
+                              },
                       ),
+                      const SizedBox(height: 16),
+
+                      if (!isCustomName) ...[
+                        // Standard Grade & Section Selectors
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Grade / Standard *',
+                                  prefixIcon: const Icon(LucideIcons.graduationCap,
+                                      size: 18),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: selectedGrade,
+                                    isExpanded: true,
+                                    items: List.generate(12, (index) {
+                                      final g = index + 1;
+                                      return DropdownMenuItem<int>(
+                                        value: g,
+                                        child: Text('Class $g'),
+                                      );
+                                    }),
+                                    onChanged: isSubmitting
+                                        ? null
+                                        : (val) {
+                                            if (val != null) {
+                                              setDialogState(() {
+                                                selectedGrade = val;
+                                                codeCtrl.text = _generateClassCode(
+                                                    selectedGrade, selectedSection);
+                                              });
+                                            }
+                                          },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Section Selector
+                            SizedBox(
+                              width: 120,
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Section *',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: selectedSection,
+                                    isExpanded: true,
+                                    items: ['A', 'B', 'C', 'D', 'E', 'F']
+                                        .map((sec) => DropdownMenuItem(
+                                              value: sec,
+                                              child: Text('Sec $sec'),
+                                            ))
+                                        .toList(),
+                                    onChanged: isSubmitting
+                                        ? null
+                                        : (val) {
+                                            if (val != null) {
+                                              setDialogState(() {
+                                                selectedSection = val;
+                                                codeCtrl.text = _generateClassCode(
+                                                    selectedGrade, selectedSection);
+                                              });
+                                            }
+                                          },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        // Custom Class Name & Section
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: customNameCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Custom Class Name *',
+                                  hintText: 'Enter custom class name',
+                                  prefixIcon: const Icon(LucideIcons.sparkles, size: 18),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onChanged: (val) {
+                                  setDialogState(() {
+                                    codeCtrl.text = _generateClassCode(
+                                      selectedGrade,
+                                      selectedSection,
+                                      customName: val,
+                                    );
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              width: 120,
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Section *',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: selectedSection,
+                                    isExpanded: true,
+                                    items: ['A', 'B', 'C', 'D', 'E', 'F']
+                                        .map((sec) => DropdownMenuItem(
+                                              value: sec,
+                                              child: Text('Sec $sec'),
+                                            ))
+                                        .toList(),
+                                    onChanged: isSubmitting
+                                        ? null
+                                        : (val) {
+                                            if (val != null) {
+                                              setDialogState(() {
+                                                selectedSection = val;
+                                                codeCtrl.text = _generateClassCode(
+                                                  selectedGrade,
+                                                  selectedSection,
+                                                  customName: customNameCtrl.text,
+                                                );
+                                              });
+                                            }
+                                          },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 14),
 
                       // Class Join Code with Regenerate button
@@ -877,7 +1189,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                         textCapitalization: TextCapitalization.characters,
                         decoration: InputDecoration(
                           labelText: 'Class Join Code (6-8 chars) *',
-                          hintText: 'e.g. 9A-K4P2',
+                          hintText: 'Enter class join code',
                           helperText:
                               'Students use this unique code on the welcome screen to enroll.',
                           prefixIcon:
@@ -890,7 +1202,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                 : () {
                                     setDialogState(() {
                                       codeCtrl.text = _generateClassCode(
-                                          selectedGrade, selectedSection);
+                                        selectedGrade,
+                                        selectedSection,
+                                        customName: isCustomName ? customNameCtrl.text : null,
+                                      );
                                     });
                                   },
                           ),
@@ -906,7 +1221,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                         controller: teacherNameCtrl,
                         decoration: InputDecoration(
                           labelText: 'Homeroom Teacher Name (Optional)',
-                          hintText: 'e.g. Mrs. Sunita Rao',
+                          hintText: 'Enter teacher name',
                           prefixIcon: const Icon(LucideIcons.user, size: 18),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -927,6 +1242,16 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                   onPressed: isSubmitting
                       ? null
                       : () async {
+                          if (isCustomName && customNameCtrl.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a custom class name'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
+
                           final code = codeCtrl.text.trim().toUpperCase();
                           if (code.isEmpty) {
                             ScaffoldMessenger.of(dialogCtx).showSnackBar(
@@ -943,15 +1268,18 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                           try {
                             final repo = ref.read(schoolRepositoryProvider);
                             final teacherName = teacherNameCtrl.text.trim();
+                            final customName = isCustomName ? customNameCtrl.text.trim() : null;
+                            final grade = isCustomName ? 0 : selectedGrade;
 
                             final created = await _createClassSection(
                               repo,
-                              grade: selectedGrade,
+                              grade: grade,
                               section: selectedSection,
                               classCode: code,
                               classTeacherName: teacherName.isNotEmpty
                                   ? teacherName
                                   : null,
+                              customName: customName,
                             );
 
                             if (dialogCtx.mounted) {
@@ -967,7 +1295,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                        'Class $selectedGrade-$selectedSection created! Join code: $code'),
+                                        '${created.displayName} created! Join code: $code'),
                                     backgroundColor: AppColors.success,
                                   ),
                                 );
@@ -1015,153 +1343,300 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   // ==========================================
   Widget _buildStudentDirectoryView() {
     final filtered = _filteredStudents;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       children: [
-        // Header Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Student Directory & Records',
-                      style: AppTypography.headlineSmall),
-                  Text(
-                    'Search, view, and modify student profiles, roll numbers, assigned classes, parent contacts, and login PINs.',
-                    style: AppTypography.bodySmall
-                        .copyWith(color: AppColors.inkSecondary),
+        // Header Row / Column
+        if (isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Student Directory & Records',
+                  style: AppTypography.headlineSmall),
+              const SizedBox(height: 4),
+              Text(
+                'Search, view, and modify student profiles, roll numbers, assigned classes, parent contacts, and login PINs.',
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.inkSecondary),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimaryLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Showing ${filtered.length} of ${_allStudents.length} Students',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    color: AppColors.brandPrimary,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.brandPrimaryLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Showing ${filtered.length} of ${_allStudents.length} Students',
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
-                  color: AppColors.brandPrimary,
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Student Directory & Records',
+                        style: AppTypography.headlineSmall),
+                    Text(
+                      'Search, view, and modify student profiles, roll numbers, assigned classes, parent contacts, and login PINs.',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.inkSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimaryLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Showing ${filtered.length} of ${_allStudents.length} Students',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.5,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         const SizedBox(height: 20),
 
         // Filter and Search Toolbar
         BentoCard(
           padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // Search Input
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    setState(() => _studentSearchQuery = val);
-                  },
-                  decoration: InputDecoration(
-                    hintText:
-                        'Search by name, roll no, admission no, or phone...',
-                    hintStyle: AppTypography.bodySmall
-                        .copyWith(color: AppColors.inkMuted),
-                    prefixIcon:
-                        const Icon(LucideIcons.search, size: 18),
-                    suffixIcon: _studentSearchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(LucideIcons.x, size: 16),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _studentSearchQuery = '');
-                            },
-                          )
-                        : null,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppColors.cardBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppColors.cardBorder),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Class Filter Dropdown using InputDecorator to avoid deprecation warning
-              Expanded(
-                flex: 2,
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Filter Class',
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: AppColors.cardBorder),
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedClassFilterId,
-                      isDense: true,
-                      isExpanded: true,
-                      items: [
-                        DropdownMenuItem<String>(
-                          value: 'all',
-                          child: Text('All Classes (${_allStudents.length})'),
-                        ),
-                        ..._classes.map((cls) {
-                          final count = _allStudents
-                              .where((s) => s.classSectionId == cls.id)
-                              .length;
-                          return DropdownMenuItem<String>(
-                            value: cls.id,
-                            child: Text('${cls.displayName} ($count)'),
-                          );
-                        }),
-                      ],
+          child: isMobile
+              ? Column(
+                  children: [
+                    // Search Input (Full Width on mobile)
+                    TextField(
+                      controller: _searchController,
                       onChanged: (val) {
-                        setState(() => _selectedClassFilterId = val ?? 'all');
+                        setState(() => _studentSearchQuery = val);
                       },
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Reload Students button
-              IconButton(
-                tooltip: 'Refresh Student Roster',
-                icon: _isLoadingStudents
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.brandPrimary,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Search by name, roll no, admission no, or phone...',
+                        hintStyle: AppTypography.bodySmall
+                            .copyWith(color: AppColors.inkMuted),
+                        prefixIcon:
+                            const Icon(LucideIcons.search, size: 18),
+                        suffixIcon: _studentSearchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(LucideIcons.x, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _studentSearchQuery = '');
+                                },
+                              )
+                            : null,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              const BorderSide(color: AppColors.cardBorder),
                         ),
-                      )
-                    : const Icon(LucideIcons.refreshCw,
-                        size: 18, color: AppColors.brandPrimary),
-                onPressed: _isLoadingStudents ? null : _loadStudents,
-              ),
-            ],
-          ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide:
+                              const BorderSide(color: AppColors.cardBorder),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Class Filter Dropdown + Refresh Button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Filter Class',
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: AppColors.cardBorder),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedClassFilterId,
+                                isDense: true,
+                                isExpanded: true,
+                                items: [
+                                  DropdownMenuItem<String>(
+                                    value: 'all',
+                                    child: Text(
+                                        'All Classes (${_allStudents.length})'),
+                                  ),
+                                  ..._classes.map((cls) {
+                                    final count = _allStudents
+                                        .where((s) => s.classSectionId == cls.id)
+                                        .length;
+                                    return DropdownMenuItem<String>(
+                                      value: cls.id,
+                                      child: Text(
+                                          '${cls.displayName} ($count)'),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (val) {
+                                  setState(() =>
+                                      _selectedClassFilterId = val ?? 'all');
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'Refresh Student Roster',
+                          icon: _isLoadingStudents
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.brandPrimary,
+                                  ),
+                                )
+                              : const Icon(LucideIcons.refreshCw,
+                                  size: 18, color: AppColors.brandPrimary),
+                          onPressed:
+                              _isLoadingStudents ? null : _loadStudents,
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    // Search Input
+                    Expanded(
+                      flex: 3,
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          setState(() => _studentSearchQuery = val);
+                        },
+                        decoration: InputDecoration(
+                          hintText:
+                              'Search by name, roll no, admission no, or phone...',
+                          hintStyle: AppTypography.bodySmall
+                              .copyWith(color: AppColors.inkMuted),
+                          prefixIcon:
+                              const Icon(LucideIcons.search, size: 18),
+                          suffixIcon: _studentSearchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(LucideIcons.x, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _studentSearchQuery = '');
+                                  },
+                                )
+                              : null,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: AppColors.cardBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: AppColors.cardBorder),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Class Filter Dropdown using InputDecorator to avoid deprecation warning
+                    Expanded(
+                      flex: 2,
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Filter Class',
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide:
+                                const BorderSide(color: AppColors.cardBorder),
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedClassFilterId,
+                            isDense: true,
+                            isExpanded: true,
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: 'all',
+                                child:
+                                    Text('All Classes (${_allStudents.length})'),
+                              ),
+                              ..._classes.map((cls) {
+                                final count = _allStudents
+                                    .where((s) => s.classSectionId == cls.id)
+                                    .length;
+                                return DropdownMenuItem<String>(
+                                  value: cls.id,
+                                  child: Text('${cls.displayName} ($count)'),
+                                );
+                              }),
+                            ],
+                            onChanged: (val) {
+                              setState(
+                                  () => _selectedClassFilterId = val ?? 'all');
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Reload Students button
+                    IconButton(
+                      tooltip: 'Refresh Student Roster',
+                      icon: _isLoadingStudents
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.brandPrimary,
+                              ),
+                            )
+                          : const Icon(LucideIcons.refreshCw,
+                              size: 18, color: AppColors.brandPrimary),
+                      onPressed: _isLoadingStudents ? null : _loadStudents,
+                    ),
+                  ],
+                ),
         ),
         const SizedBox(height: 16),
 
@@ -1468,7 +1943,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                               controller: admCtrl,
                               decoration: InputDecoration(
                                 labelText: 'Admission Number',
-                                hintText: 'e.g. ADM2026101',
+                                hintText: 'Enter admission number',
                                 prefixIcon: const Icon(LucideIcons.fileText,
                                     size: 18),
                                 border: OutlineInputBorder(
@@ -1935,7 +2410,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                     controller: titleCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Circular Title',
-                      hintText: 'e.g. Guru Nanak Jayanti Holiday',
+                      hintText: 'Enter circular title',
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1998,6 +2473,27 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   // VIEW 5: TIMETABLE BUILDER
   // ==========================================
   Widget _buildTimetableBuilderView() {
+    final activeClassId = _selectedTimetableClassId ??
+        (_classes.isNotEmpty ? _classes.first.id : null);
+    final selectedClass = _classes.firstWhere(
+      (c) => c.id == activeClassId,
+      orElse: () => _classes.isNotEmpty
+          ? _classes.first
+          : const ClassSection(
+              id: 'none',
+              grade: 0,
+              section: '',
+              classCode: '',
+            ),
+    );
+
+    final hasUploadedFile = selectedClass.timetableFileUrl != null &&
+        selectedClass.timetableFileUrl!.isNotEmpty;
+    final fileDisplay = selectedClass.timetableFileUrl ?? '';
+    final fileName = fileDisplay.contains('/')
+        ? fileDisplay.split('/').last
+        : (fileDisplay.isNotEmpty ? fileDisplay : 'timetable_master.pdf');
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -2015,17 +2511,175 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         ),
         const SizedBox(height: 20),
 
+        // Class Selector Card
+        BentoCard(
+          padding: const EdgeInsets.all(16),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmall = constraints.maxWidth < 500;
+              final dropdown = SizedBox(
+                width: isSmall ? double.infinity : 220,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Select Class / Section',
+                    prefixIcon: const Icon(LucideIcons.graduationCap, size: 18),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _classes.any((c) => c.id == activeClassId)
+                          ? activeClassId
+                          : (_classes.isNotEmpty ? _classes.first.id : null),
+                      isExpanded: true,
+                      items: _classes.map((cls) {
+                        return DropdownMenuItem<String>(
+                          value: cls.id,
+                          child: Text(
+                            cls.displayName,
+                            style: AppTypography.bodyMedium,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedTimetableClassId = val;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              );
+
+              if (isSmall) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.calendarDays,
+                            color: AppColors.brandPrimary, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Manage Class Timetable',
+                            style: AppTypography.titleSmall),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose a class to manage or view its master timetable chart.',
+                      style: AppTypography.caption,
+                    ),
+                    const SizedBox(height: 12),
+                    if (_classes.isNotEmpty)
+                      dropdown
+                    else
+                      Text('No classes available',
+                          style: AppTypography.caption
+                              .copyWith(color: AppColors.inkMuted)),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  const Icon(LucideIcons.calendarDays,
+                      color: AppColors.brandPrimary, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Manage Class Timetable',
+                            style: AppTypography.labelMedium),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Choose a class to manage or view its master timetable chart.',
+                          style: AppTypography.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  if (_classes.isNotEmpty)
+                    dropdown
+                  else
+                    Text('No classes available',
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.inkMuted)),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Timetable Management Card for Selected Class
         BentoCard(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Master Timetable Chart for Class 8-B',
-                  style: AppTypography.titleMedium),
-              const SizedBox(height: 4),
-              Text(
-                'Students can view the interactive timeline or view the full graphic chart in the Unified In-App Viewer.',
-                style: AppTypography.caption,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Master Timetable Chart for ${selectedClass.displayName}',
+                            style: AppTypography.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Students and parents view this timetable in their daily student schedule and Unified In-App Viewer.',
+                          style: AppTypography.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: hasUploadedFile
+                          ? const Color(0xFFD1FAE5)
+                          : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          hasUploadedFile
+                              ? LucideIcons.checkCircle2
+                              : LucideIcons.clock,
+                          size: 14,
+                          color: hasUploadedFile
+                              ? AppColors.success
+                              : const Color(0xFFD97706),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          hasUploadedFile
+                              ? 'Uploaded (Document)'
+                              : 'Default Schedule Active',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: hasUploadedFile
+                                ? AppColors.success
+                                : const Color(0xFFD97706),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Container(
@@ -2039,26 +2693,111 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(LucideIcons.image,
-                          size: 36, color: AppColors.brandPrimary),
+                      Icon(
+                        hasUploadedFile
+                            ? LucideIcons.fileCheck2
+                            : LucideIcons.image,
+                        size: 36,
+                        color: hasUploadedFile
+                            ? AppColors.success
+                            : AppColors.brandPrimary,
+                      ),
                       const SizedBox(height: 8),
-                      Text('Master Timetable Chart Uploaded (Class 8-B)',
-                          style: AppTypography.bodyMedium),
-                      Text('timetable_8b_2026.png • 840 KB',
-                          style: AppTypography.caption),
+                      Text(
+                        hasUploadedFile
+                            ? 'Master Timetable Uploaded (${selectedClass.displayName})'
+                            : 'No Custom Timetable Uploaded for ${selectedClass.displayName}',
+                        style: AppTypography.bodyMedium,
+                      ),
+                      Text(
+                        hasUploadedFile
+                            ? '$fileName • Ready for Students'
+                            : 'Upload a PDF, PNG, or JPEG master chart',
+                        style: AppTypography.caption,
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
+                  ElevatedButton.icon(
+                    onPressed: selectedClass.id == 'none'
+                        ? null
+                        : () async {
+                            try {
+                              final result =
+                                  await FilePicker.platform.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: [
+                                  'png',
+                                  'jpg',
+                                  'jpeg',
+                                  'pdf',
+                                  'webp'
+                                ],
+                              );
+                              if (result != null &&
+                                  result.files.isNotEmpty) {
+                                final file = result.files.first;
+                                final pickedName = file.name;
+                                final repo =
+                                    ref.read(schoolRepositoryProvider);
+                                await repo.updateClassTimetableUrl(
+                                    selectedClass.id, pickedName);
+
+                                final idx = _classes.indexWhere(
+                                    (c) => c.id == selectedClass.id);
+                                if (idx != -1) {
+                                  setState(() {
+                                    _classes[idx] = _classes[idx].copyWith(
+                                        timetableFileUrl: pickedName);
+                                  });
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Timetable for ${selectedClass.displayName} updated to $pickedName'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Upload failed: $e'),
+                                    backgroundColor: AppColors.danger,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.brandPrimary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                    icon: const Icon(LucideIcons.uploadCloud, size: 16),
+                    label: const Text('Upload Timetable (Image / Document)'),
+                  ),
                   OutlinedButton.icon(
-                    onPressed: () {
-                      context.push(AppRoutes.studentTimetable);
-                    },
+                    onPressed: selectedClass.id == 'none'
+                        ? null
+                        : () {
+                            context.push(
+                              AppRoutes.studentTimetable,
+                              extra: selectedClass.id,
+                            );
+                          },
                     icon: const Icon(LucideIcons.eye, size: 16),
-                    label: const Text('Preview Student Timetable'),
+                    label: const Text('Preview Timetable'),
                   ),
                 ],
               ),

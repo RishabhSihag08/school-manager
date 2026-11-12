@@ -173,7 +173,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.studentTimetable,
         name: 'studentTimetable',
-        builder: (context, state) => const TimetableViewScreen(),
+        builder: (context, state) {
+          final classId = state.extra as String? ?? state.uri.queryParameters['classId'];
+          return TimetableViewScreen(classSectionId: classId);
+        },
       ),
       GoRoute(
         path: AppRoutes.studentSyllabus,

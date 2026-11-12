@@ -323,13 +323,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       onTap: () {
         setState(() {
           _selectedRole = roleKey;
-          if (roleKey == 'teacher') {
-            _staffCodeController.text = 'T-RAMESH';
-            _staffPinController.text = '1234';
-          } else if (roleKey == 'admin') {
-            _staffCodeController.text = 'ADMIN-01';
-            _staffPinController.text = '1234';
-          }
         });
       },
       child: Row(
@@ -578,7 +571,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Have a 6-character Class Code (e.g. 8B-K9X2)? Enter class directly',
+                      'Have a class code? Enter class directly',
                       style: AppTypography.bodySmall,
                     ),
                   ],
@@ -680,7 +673,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                   obscureText: _pinObscured,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    hintText: '4-Digit PIN (Default: 1234)',
+                    hintText: 'Enter 4-digit PIN',
                     border: InputBorder.none,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -730,8 +723,8 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
   Widget _buildStaffLoginCard(({Color color, Color bg, IconData icon, String title}) meta) {
     final isTeacher = _selectedRole == 'teacher';
     final codeHint = isTeacher
-        ? 'Teacher Login Code (e.g. T-RAMESH)'
-        : 'Admin Login Code (e.g. ADMIN-01)';
+        ? 'Enter teacher login code'
+        : 'Enter admin login code';
 
     return BentoCard(
       padding: const EdgeInsets.all(20),
@@ -773,7 +766,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
               obscureText: _pinObscured,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                hintText: '4-Digit PIN (Default: 1234)',
+                hintText: 'Enter 4-digit PIN',
                 border: InputBorder.none,
                 prefixIcon: const Icon(LucideIcons.lock, size: 18, color: AppColors.inkMuted),
                 suffixIcon: IconButton(

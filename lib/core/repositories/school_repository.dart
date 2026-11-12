@@ -40,6 +40,7 @@ abstract class SchoolRepository {
     required String classCode,
     String? classTeacherId,
     String? classTeacherName,
+    String? customName,
   });
 
   Future<List<Student>> getStudentsForClass(String classSectionId);
@@ -72,6 +73,8 @@ abstract class SchoolRepository {
   });
 
   // --- Timetable ---
+  Future<void> updateClassTimetableUrl(String classSectionId, String url);
+
   Future<List<TimetablePeriod>> getTimetableForDay(
     String classSectionId,
     int dayOfWeek,

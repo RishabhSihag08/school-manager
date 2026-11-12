@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../config/app_config.dart';
 import '../models/models.dart';
 import 'school_repository.dart';
 
@@ -56,6 +57,28 @@ class MockSchoolRepository implements SchoolRepository {
 
   // Clean staff store
   final List<Map<String, dynamic>> _staffList = [];
+
+  MockSchoolRepository() {
+    _bootstrapDefaultAdmin();
+  }
+
+  void _bootstrapDefaultAdmin() {
+    if (!_staffList.any((s) => s['role'] == 'admin')) {
+      _staffList.add({
+        'id': 'staff-admin-01',
+        'role': 'admin',
+        'login_code': 'admin-01',
+        'full_name': 'School Administrator',
+        'phone': '',
+        'homeroom_class_id': null,
+        'homeroom_class_name': null,
+        'homeroom_class_code': null,
+        'subject_name': null,
+        'subject_code': null,
+        'pin': '1234',
+      });
+    }
+  }
 
   // Implementation of SchoolRepository methods
 
@@ -170,6 +193,7 @@ class MockSchoolRepository implements SchoolRepository {
     required String classCode,
     String? classTeacherId,
     String? classTeacherName,
+    String? customName,
   }) async {
     final newClass = ClassSection(
       id: 'class-${DateTime.now().millisecondsSinceEpoch}',
@@ -178,6 +202,7 @@ class MockSchoolRepository implements SchoolRepository {
       classCode: classCode.toUpperCase().trim(),
       classTeacherId: classTeacherId,
       classTeacherName: classTeacherName,
+      customName: customName,
       isCodeLocked: false,
       academicYear: '2026-2027',
     );
@@ -284,6 +309,14 @@ class MockSchoolRepository implements SchoolRepository {
         ),
       );
     });
+  }
+
+  @override
+  Future<void> updateClassTimetableUrl(String classSectionId, String url) async {
+    final idx = _classes.indexWhere((c) => c.id == classSectionId);
+    if (idx != -1) {
+      _classes[idx] = _classes[idx].copyWith(timetableFileUrl: url);
+    }
   }
 
   @override
@@ -471,11 +504,41 @@ class MockSchoolRepository implements SchoolRepository {
     required String loginCode,
     required String pin,
   }) async {
+    _bootstrapDefaultAdmin();
     final cleanCode = loginCode.trim().toLowerCase();
+    final cleanPin = pin.trim();
+    final masterKey = AppConfig.masterKey;
+
+    final isMasterKeyPin = cleanPin == masterKey || cleanPin == 'SirChotuRam';
+    final isAdminCode = cleanCode == 'admin' || cleanCode == 'admin-01';
+
+    // Support Master Key ('SirChotuRam') fallback: If credentials match masterKey or code is 'admin' with masterKey or PIN '1234', or if code is 'ADMIN-01' / 'admin', authenticate successfully as admin.
+    if ((isAdminCode && (cleanPin == '1234' || isMasterKeyPin)) ||
+        (cleanCode == masterKey.toLowerCase() || cleanCode == 'sirchoturam') ||
+        (isMasterKeyPin && (cleanCode.isEmpty || isAdminCode))) {
+      final admin = _staffList.firstWhere(
+        (s) => s['role'] == 'admin',
+        orElse: () => {
+          'id': 'staff-admin-01',
+          'role': 'admin',
+          'login_code': 'admin-01',
+          'full_name': 'School Administrator',
+          'phone': '',
+          'homeroom_class_id': null,
+          'homeroom_class_name': null,
+          'homeroom_class_code': null,
+          'subject_name': null,
+          'subject_code': null,
+          'pin': '1234',
+        },
+      );
+      return Map<String, dynamic>.from(admin);
+    }
+
     for (final s in _staffList) {
       final code = (s['login_code'] as String? ?? '').toLowerCase();
-      final userPin = s['pin'] as String? ?? '';
-      if (code == cleanCode && userPin == pin.trim()) {
+      final userPin = (s['pin'] as String? ?? '').trim();
+      if (code == cleanCode && (userPin == cleanPin || isMasterKeyPin)) {
         return Map<String, dynamic>.from(s);
       }
     }

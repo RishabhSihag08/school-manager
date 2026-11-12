@@ -154,6 +154,70 @@ void main() {
       expect(list.first.title, 'Numerical Problems on Pressure');
     });
 
+    test('Admin login with default bootstrapped profile and Master Key fallback', () async {
+      // Bootstrapped admin login with 'admin' and '1234'
+      final admin1 = await mockRepo.loginStaff(loginCode: 'admin', pin: '1234');
+      expect(admin1, isNotNull);
+      expect(admin1!['role'], 'admin');
+
+      // Case-insensitive 'ADMIN-01' and '1234'
+      final admin2 = await mockRepo.loginStaff(loginCode: 'ADMIN-01', pin: '1234');
+      expect(admin2, isNotNull);
+      expect(admin2!['role'], 'admin');
+
+      // Master Key fallback with code 'admin'
+      final admin3 = await mockRepo.loginStaff(loginCode: 'admin', pin: 'SirChotuRam');
+      expect(admin3, isNotNull);
+      expect(admin3!['role'], 'admin');
+
+      // Master key as login code
+      final admin4 = await mockRepo.loginStaff(loginCode: 'SirChotuRam', pin: 'any-pin');
+      expect(admin4, isNotNull);
+      expect(admin4!['role'], 'admin');
+
+      // SupabaseSchoolRepository fallback
+      final supaAdmin = await supabaseRepo.loginStaff(loginCode: 'admin', pin: '1234');
+      expect(supaAdmin, isNotNull);
+      expect(supaAdmin!['role'], 'admin');
+    });
+
+    test('Teacher login is case-insensitive', () async {
+      await mockRepo.registerStaff(
+        fullName: 'Ramesh Kumar',
+        role: 'teacher',
+        loginCode: 'T-RAMESH',
+        pin: '1234',
+        subjectName: 'Mathematics',
+        subjectCode: 'MATH',
+      );
+
+      final loggedInLower = await mockRepo.loginStaff(loginCode: 't-ramesh', pin: '1234');
+      expect(loggedInLower, isNotNull);
+      expect(loggedInLower!['full_name'], 'Ramesh Kumar');
+
+      final loggedInUpper = await mockRepo.loginStaff(loginCode: 'T-RAMESH', pin: '1234');
+      expect(loggedInUpper, isNotNull);
+      expect(loggedInUpper!['full_name'], 'Ramesh Kumar');
+    });
+
+    test('ClassSection customName displays correctly and serializes to/from JSON', () {
+      final customClass = ClassSection(
+        id: 'nursery-a',
+        grade: 0,
+        section: 'A',
+        customName: 'Nursery',
+        classCode: 'NUR-A101',
+      );
+      expect(customClass.displayName, 'Nursery-A');
+
+      final json = customClass.toJson();
+      expect(json['custom_name'], 'Nursery');
+
+      final reconstructed = ClassSection.fromJson(json);
+      expect(reconstructed.customName, 'Nursery');
+      expect(reconstructed.displayName, 'Nursery-A');
+    });
+
     test('SupabaseSchoolRepository graceful fallback works without crashing', () async {
       // Supabase is uninitialized in unit test environment
       final classes = await supabaseRepo.getAllClassSections();

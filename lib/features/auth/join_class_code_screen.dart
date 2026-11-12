@@ -611,7 +611,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
           _buildFormField(
             label: 'Student Full Name',
             controller: _nameController,
-            hint: 'e.g. Aarav Sharma',
+            hint: 'Enter student full name',
             icon: LucideIcons.user,
           ),
           const SizedBox(height: 16),
@@ -624,7 +624,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
                 child: _buildFormField(
                   label: 'Roll Number',
                   controller: _rollController,
-                  hint: '1',
+                  hint: 'Enter roll number',
                   icon: LucideIcons.hash,
                   keyboardType: TextInputType.number,
                 ),
@@ -635,7 +635,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
                 child: _buildFormField(
                   label: 'Admission No. (Optional)',
                   controller: _admissionController,
-                  hint: 'ADM2026101',
+                  hint: 'Enter admission number',
                   icon: LucideIcons.fileText,
                 ),
               ),
@@ -647,7 +647,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
           _buildFormField(
             label: 'Parent / Guardian Name',
             controller: _parentNameController,
-            hint: 'e.g. Rajesh Sharma',
+            hint: 'Enter parent / guardian name',
             icon: LucideIcons.users,
           ),
           const SizedBox(height: 16),

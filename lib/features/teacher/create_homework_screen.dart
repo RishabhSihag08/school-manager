@@ -336,7 +336,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                             : null,
                     decoration: InputDecoration(
                       labelText: 'Title / Chapter Name *',
-                      hintText: 'e.g. Linear Equations Exercise 2.3',
+                      hintText: 'Enter title or chapter name',
                       filled: true,
                       fillColor: AppColors.canvasBackground,
                       border: OutlineInputBorder(
