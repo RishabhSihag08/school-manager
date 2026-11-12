@@ -1,4 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Global Application Configuration for School Manager
 class AppConfig {
@@ -30,8 +31,12 @@ class AppConfig {
   static const String githubOwner = 'RishabhSihag08';
   static const String githubRepo = 'school-manager';
   static const String otaChannel = 'github-releases';
-  static const String currentVersion = '1.0.3';
-  static const int currentBuildNumber = 3;
+
+  static String _version = '1.0.4';
+  static int _buildNumber = 4;
+
+  static String get currentVersion => _version;
+  static int get currentBuildNumber => _buildNumber;
 
   static String get githubLatestReleaseApi =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';
@@ -39,12 +44,27 @@ class AppConfig {
   static String get githubAllReleasesApi =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases';
 
-  /// Safe initialization loading .env
+  /// Synchronize dynamic app version with platform package manager
+  static Future<void> syncPackageInfo() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.isNotEmpty) {
+        _version = info.version;
+        _buildNumber = int.tryParse(info.buildNumber) ?? _buildNumber;
+      }
+    } catch (_) {
+      // Retain defaults gracefully in environments where platform channel is unavailable
+    }
+  }
+
+  /// Safe initialization loading .env and platform package info
   static Future<void> init() async {
     try {
       await dotenv.load(fileName: '.env');
     } catch (_) {
       // Fallback gracefully if .env asset is absent in test environments
     }
+
+    await syncPackageInfo();
   }
 }

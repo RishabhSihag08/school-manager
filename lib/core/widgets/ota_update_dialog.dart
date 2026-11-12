@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
+import '../config/app_config.dart';
 import '../providers/core_providers.dart';
 import '../services/ota_update_service.dart';
 import '../theme/app_colors.dart';
@@ -45,7 +46,7 @@ class OtaUpdateDialog extends ConsumerStatefulWidget {
   ConsumerState<OtaUpdateDialog> createState() => _OtaUpdateDialogState();
 }
 
-class _OtaUpdateDialogState extends ConsumerState<OtaUpdateDialog> {
+class _OtaUpdateDialogState extends ConsumerState<OtaUpdateDialog> with WidgetsBindingObserver {
   bool _isDownloading = false;
   bool _isDownloaded = false;
   String? _downloadedApkPath;
@@ -55,7 +56,59 @@ class _OtaUpdateDialogState extends ConsumerState<OtaUpdateDialog> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkExistingCachedApk();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfAlreadyUpdated();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkIfAlreadyUpdated();
+    }
+  }
+
+  Future<void> _checkIfAlreadyUpdated() async {
+    try {
+      await AppConfig.syncPackageInfo();
+      final isStillNewer = OtaUpdateService.isNewerVersion(
+        widget.release.version,
+        AppConfig.currentVersion,
+      );
+
+      if (!isStillNewer) {
+        // App has been updated to the target release version!
+        ref.read(otaUpdateProvider.notifier).dismissUpdate();
+
+        // Clean up cached apk
+        try {
+          final tempDir = await getTemporaryDirectory();
+          final apkFile = File('${tempDir.path}/school-manager-v${widget.release.version}.apk');
+          if (await apkFile.exists()) {
+            await apkFile.delete();
+          }
+        } catch (_) {}
+
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✨ Updated to v${AppConfig.currentVersion} successfully!'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _checkExistingCachedApk() async {

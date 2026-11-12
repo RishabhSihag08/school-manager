@@ -285,9 +285,10 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
 
   /// Check GitHub Releases for full APK releases
   Future<OtaReleaseInfo?> checkForUpdates({
-    String currentVersion = AppConfig.currentVersion,
+    String? currentVersion,
     bool simulateMockIfNotFound = false,
   }) async {
+    final effectiveVersion = currentVersion ?? AppConfig.currentVersion;
     state = state.copyWith(isChecking: true, errorMessage: null);
 
     try {
@@ -304,7 +305,7 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final release = OtaReleaseInfo.fromGitHubJson(json);
 
-        if (isNewerVersion(release.version, currentVersion)) {
+        if (isNewerVersion(release.version, effectiveVersion)) {
           state = state.copyWith(
             isChecking: false,
             availableRelease: release,
@@ -317,7 +318,7 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
     }
 
     // Graceful offline / demo school fallback
-    if (simulateMockIfNotFound && isNewerVersion('1.0.1', currentVersion)) {
+    if (simulateMockIfNotFound && isNewerVersion('1.0.1', effectiveVersion)) {
       final mockRelease = OtaReleaseInfo(
         version: '1.0.1',
         title: 'School Manager v1.0.1: Smart Timetable & Instant Sync',
@@ -467,6 +468,6 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
   }
 
   void dismissUpdate() {
-    state = state.copyWith(clearRelease: true);
+    state = state.copyWith(clearRelease: true, localApkPath: null);
   }
 }
