@@ -81,6 +81,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // App Architecture & Version Badge
               _buildSystemInfoCard(),
 
+              const SizedBox(height: 20),
+
+              // Prominent Log Out
+              _buildLogoutButton(),
+
               const SizedBox(height: 32),
             ],
           ),
@@ -179,12 +184,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (activeRole == 'student' && currentStudent != null) {
       name = currentStudent.fullName;
-      roleDetail = 'Student • Class 8-B • Roll #${currentStudent.rollNo}';
-      roleColor = AppColors.getHouseColor(currentStudent.house);
-      roleBg = AppColors.getHouseBgColor(currentStudent.house);
+      roleDetail = 'Student • Roll #${currentStudent.rollNo}';
+      roleColor = AppColors.brandPrimary;
+      roleBg = AppColors.brandPrimaryLight;
     } else if (activeRole == 'teacher' && currentStaff != null) {
       name = currentStaff['full_name'] ?? 'Teacher';
-      roleDetail = 'Class Teacher • ${currentStaff['homeroom_class_name'] ?? 'Class 8-B'}';
+      roleDetail = 'Faculty • ${currentStaff['subject_name'] ?? currentStaff['homeroom_class_name'] ?? 'Instructor'}';
       roleColor = const Color(0xFF059669);
       roleBg = const Color(0xFFECFDF5);
     } else if (activeRole == 'admin') {
@@ -228,32 +233,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           TactileFeedback(
-            onTap: () async {
-              final router = GoRouter.of(context);
-              await SessionService.clearSession();
-              ref.read(currentStudentProvider.notifier).state = null;
-              ref.read(currentStaffProvider.notifier).state = null;
-              router.go(AppRoutes.onboarding);
-            },
+            onTap: () => SessionService.confirmAndLogout(context, ref),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: AppColors.secondarySurface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.cardBorder),
+                color: AppColors.dangerBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.logOut, size: 14, color: AppColors.inkSecondary),
-                  const SizedBox(width: 4),
+                  const Icon(LucideIcons.logOut, size: 14, color: AppColors.danger),
+                  const SizedBox(width: 6),
                   Text(
-                    'Switch',
+                    'Log Out',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.inkPrimary,
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return BentoCard(
+      padding: const EdgeInsets.all(16),
+      borderColor: AppColors.danger.withValues(alpha: 0.3),
+      onTap: () => SessionService.confirmAndLogout(context, ref),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(LucideIcons.logOut, color: AppColors.danger, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Log Out of School Manager',
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.danger,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

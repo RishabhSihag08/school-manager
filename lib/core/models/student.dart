@@ -7,7 +7,7 @@ class Student {
   final String classSectionId;
   final String parentName;
   final String parentPhone;
-  final String house; // 'red', 'blue', 'green', 'yellow'
+  final String house; // Optional/legacy house field, defaults to empty
   final String pinHash;
   final int homeworkStreak;
   final DateTime? lastHomeworkCompletedDate;
@@ -22,7 +22,7 @@ class Student {
     required this.classSectionId,
     required this.parentName,
     required this.parentPhone,
-    this.house = 'blue',
+    this.house = '',
     required this.pinHash,
     this.homeworkStreak = 0,
     this.lastHomeworkCompletedDate,
@@ -72,7 +72,7 @@ class Student {
       classSectionId: json['class_section_id'] as String,
       parentName: json['parent_name'] as String? ?? '',
       parentPhone: json['parent_phone'] as String? ?? '',
-      house: json['house'] as String? ?? 'blue',
+      house: json['house'] as String? ?? '',
       pinHash: json['pin_hash'] as String? ?? '1234',
       homeworkStreak: json['homework_streak'] as int? ?? 0,
       lastHomeworkCompletedDate: json['last_homework_completed_date'] != null

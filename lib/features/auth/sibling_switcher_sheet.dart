@@ -11,7 +11,7 @@ import '../../core/widgets/bento_card.dart';
 import '../../core/widgets/tactile_feedback.dart';
 
 /// Modal bottom sheet allowing parents to switch between multiple linked siblings
-/// with distinctive house color rings, or register another child via Class Code.
+/// or register another child via Class Code.
 class SiblingSwitcherSheet extends ConsumerWidget {
   const SiblingSwitcherSheet({super.key});
 
@@ -98,8 +98,6 @@ class SiblingSwitcherSheet extends ConsumerWidget {
           // Sibling list
           ...siblings.map((sibling) {
             final isSelected = currentStudent?.id == sibling.id;
-            final houseColor = AppColors.getHouseColor(sibling.house);
-            final houseBg = AppColors.getHouseBgColor(sibling.house);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
@@ -113,25 +111,17 @@ class SiblingSwitcherSheet extends ConsumerWidget {
                 },
                 child: Row(
                   children: [
-                    // House Color Ring Avatar
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: houseColor, width: 2.5),
-                      ),
-                      child: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: houseBg,
-                        child: Text(
-                          sibling.fullName.isNotEmpty
-                              ? sibling.fullName.substring(0, 1).toUpperCase()
-                              : 'S',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: houseColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.brandPrimaryLight,
+                      child: Text(
+                        sibling.fullName.isNotEmpty
+                            ? sibling.fullName.substring(0, 1).toUpperCase()
+                            : 'S',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppColors.brandPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -142,34 +132,11 @@ class SiblingSwitcherSheet extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                sibling.fullName,
-                                style: AppTypography.titleMedium.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: houseBg,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${sibling.house[0].toUpperCase()}${sibling.house.substring(1)} House',
-                                  style: GoogleFonts.inter(
-                                    color: houseColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            sibling.fullName,
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(

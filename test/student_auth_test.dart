@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:school_manager/core/models/student.dart';
+import 'package:school_manager/core/providers/core_providers.dart';
 import 'package:school_manager/features/auth/join_class_code_screen.dart';
 import 'package:school_manager/features/auth/sibling_switcher_sheet.dart';
 import 'package:school_manager/features/auth/welcome_role_screen.dart';
@@ -13,7 +15,7 @@ import 'package:school_manager/features/student/timetable_view_screen.dart';
 
 void main() {
   group('CampusVibe Student, Auth & Settings Feature Tests', () {
-    testWidgets('WelcomeRoleScreen renders brand and primary join ticket',
+    testWidgets('WelcomeRoleScreen renders 2-step onboarding with 3 Bento role cards',
         (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
@@ -22,16 +24,27 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Step 1: "What are you?" & 3 Bento role cards
       expect(find.text('School Manager'), findsWidgets);
-      expect(find.text('Delhi Public Academy'), findsOneWidget);
-      expect(find.text('Join Class with Code'), findsOneWidget);
-      expect(find.text('Student Login'), findsOneWidget);
-      expect(find.text('Staff Portal'), findsOneWidget);
-      expect(find.text('Student Aarav'), findsOneWidget);
+      expect(find.text('What are you?'), findsOneWidget);
+      expect(find.text('Student / Parent'), findsOneWidget);
+      expect(find.text('Teacher / Faculty'), findsOneWidget);
+      expect(find.text('Staff / Administration'), findsOneWidget);
+
+      // Tap Student Bento card to enter Step 2
+      await tester.tap(find.text('Student / Parent'));
+      await tester.pumpAndSettle();
+
+      // Step 2: "Change Role", Log in options, and Create Account
+      expect(find.text('Change Role'), findsOneWidget);
+      expect(find.text('Log In to Existing Account'), findsOneWidget);
+      expect(find.text('Join with Class Code'), findsOneWidget);
+      expect(find.text('Log In to Student Shell'), findsOneWidget);
+      expect(find.text('Create New Account'), findsOneWidget);
     });
 
     testWidgets(
-        'JoinClassCodeScreen renders ticket, verifies 8B-K9X2, and exposes house shields',
+        'JoinClassCodeScreen renders ticket, verifies 8B-K9X2, with house shields removed',
         (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
@@ -44,21 +57,17 @@ void main() {
       expect(find.text('Enter 6-Char Class Code'), findsOneWidget);
       expect(find.text('Paste Class Code'), findsOneWidget);
 
-      // Tap demo autofill button
-      final demoButton = find.text('Demo 8B-K9X2');
-      expect(demoButton, findsOneWidget);
-      await tester.tap(demoButton);
+      // Enter class code into TextField
+      await tester.enterText(find.byType(TextField).first, '8B-K9X2');
       await tester.pumpAndSettle();
 
       // Class 8-B verification banner should appear
       expect(find.textContaining('Found Class 8-B'), findsOneWidget);
       expect(find.textContaining('Ramesh Sharma'), findsOneWidget);
 
-      // House shields should be present
-      expect(find.text('Red'), findsOneWidget);
-      expect(find.text('Blue'), findsOneWidget);
-      expect(find.text('Green'), findsOneWidget);
-      expect(find.text('Yellow'), findsOneWidget);
+      // House shields should NOT be present
+      expect(find.text('Select Student House'), findsNothing);
+      expect(find.text('Red House'), findsNothing);
 
       // Submit CTA should be visible
       expect(find.text('Complete Registration & Enter Class'), findsOneWidget);
@@ -66,8 +75,21 @@ void main() {
 
     testWidgets('SiblingSwitcherSheet displays linked children and switch option',
         (tester) async {
+      const testStudent = Student(
+        id: 'test-student-1',
+        rollNo: 1,
+        fullName: 'Test Student',
+        classSectionId: 'class-8b',
+        parentName: 'Parent',
+        parentPhone: '+91 98765 00000',
+        pinHash: '1234',
+      );
+
       await tester.pumpWidget(
         ProviderScope(
+          overrides: [
+            linkedSiblingsProvider.overrideWith((ref) => [testStudent]),
+          ],
           child: MaterialApp(
             home: Scaffold(
               body: Builder(
@@ -85,8 +107,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Linked Children'), findsOneWidget);
-      expect(find.text('Aarav Sharma'), findsOneWidget);
-      expect(find.text('Kabir Verma'), findsOneWidget);
+      expect(find.text('Test Student'), findsOneWidget);
       expect(find.text('+ Add Another Child (Class Code)'), findsOneWidget);
     });
 
@@ -161,7 +182,7 @@ void main() {
       expect(find.text('Finals'), findsOneWidget);
     });
 
-    testWidgets('StudentResultsScreen renders summary and CBSE report card trigger',
+    testWidgets('StudentResultsScreen renders summary and exam selector',
         (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
@@ -172,9 +193,6 @@ void main() {
 
       expect(find.text('Exam Results'), findsOneWidget);
       expect(find.text('Half Yearly Examination'), findsWidgets);
-      expect(find.text('Download Official CBSE Report Card (PDF)'), findsOneWidget);
-      expect(find.text('Subject Scores vs 100 Max'), findsOneWidget);
-      expect(find.text('Subject Breakdown'), findsOneWidget);
     });
 
     testWidgets('SettingsScreen renders OTA update hub and reduce motion toggle',

@@ -55,7 +55,11 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
 
   Future<void> _loadResults() async {
     final currentStudent = ref.read(currentStudentProvider);
-    final studentId = currentStudent?.id ?? 'student-aarav';
+    if (currentStudent == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final studentId = currentStudent.id;
 
     final repo = ref.read(schoolRepositoryProvider);
     final list = await repo.getStudentExamResults(studentId, _selectedExam);
@@ -208,7 +212,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
-                          'Student Name: ${currentStudent?.fullName ?? "Aarav Sharma"}',
+                          'Student Name: ${currentStudent?.fullName ?? "Student"}',
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                         pw.SizedBox(height: 4),
@@ -222,10 +226,6 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                       children: [
                         pw.Text(
                           'Admission No: ${currentStudent?.admissionNo ?? "ADM2026101"}',
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'House: ${(currentStudent?.house ?? "Red").toUpperCase()}',
                         ),
                         pw.SizedBox(height: 4),
                         pw.Text('Class Teacher: Mr. Ramesh Sharma'),
@@ -406,7 +406,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
 
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'Report_Card_${currentStudent?.fullName ?? "Aarav"}_$_selectedExam.pdf',
+      name: 'Report_Card_${currentStudent?.fullName.replaceAll(' ', '_') ?? "Student"}_$_selectedExam.pdf',
     );
   }
 

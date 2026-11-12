@@ -1,10 +1,13 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/student.dart';
 import '../providers/core_providers.dart';
 import '../router/app_router.dart';
+import '../theme/app_colors.dart';
 
 /// Persistent Session Service for School Manager
 /// Ensures users stay logged in across app closes until explicit logout
@@ -117,5 +120,52 @@ class SessionService {
       debugPrint('SessionService: Error determining initial route: $e');
     }
     return AppRoutes.onboarding;
+  }
+
+  /// Show a confirmation dialog and log out the user from School Manager
+  static Future<bool> confirmAndLogout(BuildContext context, WidgetRef ref) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.logOut, color: AppColors.danger, size: 22),
+            SizedBox(width: 10),
+            Text('Log Out'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of School Manager?',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      await clearSession();
+      ref.read(currentStudentProvider.notifier).state = null;
+      ref.read(currentStaffProvider.notifier).state = null;
+      ref.read(activeRoleProvider.notifier).state = 'student';
+      if (context.mounted) {
+        context.go(AppRoutes.onboarding);
+      }
+      return true;
+    }
+    return false;
   }
 }

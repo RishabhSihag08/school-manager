@@ -15,6 +15,7 @@ import '../../features/student/timetable_view_screen.dart';
 import '../../features/teacher/teacher_dashboard.dart';
 import '../../features/teacher/mark_attendance_screen.dart';
 import '../../features/teacher/create_homework_screen.dart';
+import '../../features/teacher/teacher_syllabus_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/excel_upload_wizard.dart';
 import '../providers/core_providers.dart';
@@ -37,6 +38,7 @@ class AppRoutes {
   static const String teacherDashboard = '/teacher';
   static const String teacherAttendance = '/teacher/attendance';
   static const String teacherCreateHomework = '/teacher/homework/new';
+  static const String teacherSyllabus = '/teacher/syllabus';
 
   static const String adminDashboard = '/admin';
   static const String adminExcelWizard = '/admin/excel-wizard';
@@ -197,6 +199,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.teacherCreateHomework,
         name: 'teacherCreateHomework',
         builder: (context, state) => const CreateHomeworkScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.teacherSyllabus,
+        name: 'teacherSyllabus',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return TeacherSyllabusScreen(
+            classSectionId: extra['class_section_id'] as String? ?? 'class-8b',
+            className: extra['class_name'] as String? ?? 'Class 8-B',
+            subjectName: extra['subject_name'] as String? ?? 'Mathematics',
+            subjectCode: extra['subject_code'] as String? ?? 'MATH',
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.adminDashboard,

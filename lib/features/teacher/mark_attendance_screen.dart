@@ -284,8 +284,6 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         break;
     }
 
-    final houseColor = AppColors.getHouseColor(student.house);
-
     return TactileFeedback(
       onTap: () => _onStudentTap(student.id),
       onLongPress: () => _onStudentLongPress(student.id),
@@ -308,7 +306,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Top Row: Roll No Badge + House Indicator
+            // Top Row: Roll No Badge + Status Indicator
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -318,7 +316,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: houseColor, width: 1.5),
+                    border: Border.all(color: AppColors.cardBorder, width: 1.5),
                   ),
                   child: Center(
                     child: Text(

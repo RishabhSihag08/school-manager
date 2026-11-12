@@ -13,6 +13,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
 import '../../core/widgets/tactile_feedback.dart';
+import 'teacher_syllabus_screen.dart';
 
 /// School Manager Teacher 2-Gear Dashboard
 /// Gear 1: Homeroom Class 8-B Pinned Banner (Join Code, Lock/Copy, 30-sec Roll Call, Roster, Notice)
@@ -31,6 +32,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   int _totalCount = 42;
   String _classCode = '8B-K9X2';
   bool _isLoading = false;
+  List<Map<String, dynamic>> _subjectAllocations = [];
 
   @override
   void initState() {
@@ -61,6 +63,57 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         _totalCount = attList.length;
       });
     }
+
+    // Load dynamic subject allocations for this teacher's subject
+    final staff = ref.read(currentStaffProvider);
+    final teacherId = staff?['id'] as String? ?? 'teacher-ramesh';
+    final teacherSubject = staff?['subject_name'] as String? ?? 'Mathematics';
+    final teacherSubjectCode = staff?['subject_code'] as String? ?? 'MATH';
+
+    final allocations = await repo.getTeacherSubjectAllocations(teacherId);
+    var filtered = allocations.where((a) {
+      final subName = (a['subject_name'] as String?)?.toLowerCase() ?? '';
+      final subCode = (a['subject_code'] as String?)?.toUpperCase() ?? '';
+      return subName == teacherSubject.toLowerCase() || subCode == teacherSubjectCode.toUpperCase();
+    }).toList();
+
+    if (filtered.isEmpty) {
+      filtered = [
+        {
+          'class_section_id': 'class-8b',
+          'class_name': 'Class 8-B',
+          'subject_name': teacherSubject,
+          'subject_code': teacherSubjectCode,
+          'is_homeroom': true,
+          'student_count': 42,
+          'schedule': 'Mon, Wed, Fri • P1 (08:00 AM)',
+        },
+        {
+          'class_section_id': 'class-6a',
+          'class_name': 'Class 6-A',
+          'subject_name': teacherSubject,
+          'subject_code': teacherSubjectCode,
+          'is_homeroom': false,
+          'student_count': 38,
+          'schedule': 'Tue, Thu, Sat • P2 (08:45 AM)',
+        },
+        {
+          'class_section_id': 'class-7c',
+          'class_name': 'Class 7-C',
+          'subject_name': teacherSubject,
+          'subject_code': teacherSubjectCode,
+          'is_homeroom': false,
+          'student_count': 40,
+          'schedule': 'Mon, Tue, Fri • P4 (10:15 AM)',
+        },
+      ];
+    }
+    if (mounted) {
+      setState(() {
+        _subjectAllocations = filtered;
+      });
+    }
+
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -195,7 +248,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, idx) {
                     final s = students[idx];
-                    final houseColor = AppColors.getHouseColor(s.house);
                     return BentoCard(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
@@ -206,8 +258,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                             height: 36,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: houseColor, width: 2),
-                              color: houseColor.withValues(alpha: 0.12),
+                              border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.3), width: 1.5),
+                              color: AppColors.brandPrimaryLight,
                             ),
                             child: Center(
                               child: Text(
@@ -215,7 +267,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                                 style: GoogleFonts.jetBrainsMono(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
-                                  color: AppColors.inkPrimary,
+                                  color: AppColors.brandPrimary,
                                 ),
                               ),
                             ),
@@ -235,22 +287,23 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                               ],
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: houseColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${s.house.toUpperCase()} HOUSE',
-                              style: AppTypography.monospace(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: houseColor,
+                          if (s.admissionNo != null && s.admissionNo!.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondarySurface,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                s.admissionNo!,
+                                style: AppTypography.monospace(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.inkSecondary,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     );
@@ -372,6 +425,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   Widget build(BuildContext context) {
     final staff = ref.watch(currentStaffProvider);
     final teacherName = staff?['full_name'] ?? 'Mr. Ramesh Sharma';
+    final teachingSubject = staff?['subject_name'] ?? 'Mathematics';
+    final homeroomName = staff?['homeroom_class_name'] as String? ?? 'Class 8-B';
 
     return Scaffold(
       backgroundColor: AppColors.canvasBackground,
@@ -390,28 +445,29 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           ],
         ),
         actions: [
-          // Switch Role / Session Action
+          // Prominent Log Out Action
           TactileFeedback(
-            onTap: () async {
-              final router = GoRouter.of(context);
-              await SessionService.clearSession();
-              ref.read(currentStaffProvider.notifier).state = null;
-              router.go(AppRoutes.onboarding);
-            },
+            onTap: () => SessionService.confirmAndLogout(context, ref),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AppColors.cardSurface,
+                color: AppColors.dangerBg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.cardBorder),
+                border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   const Icon(LucideIcons.logOut,
-                      size: 14, color: AppColors.inkSecondary),
+                      size: 14, color: AppColors.danger),
                   const SizedBox(width: 4),
-                  Text('Switch Role', style: AppTypography.pillLabel),
+                  Text(
+                    'Log Out',
+                    style: AppTypography.pillLabel.copyWith(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -463,7 +519,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                               style: AppTypography.headlineSmall,
                             ),
                             Text(
-                              'Class Teacher: 8-B • Subject: Mathematics',
+                              'Class Teacher: ${homeroomName.replaceFirst("Class ", "")} • Subject: $teachingSubject',
                               style: AppTypography.bodySmall
                                   .copyWith(color: AppColors.inkSecondary),
                             ),
@@ -827,7 +883,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 border: Border.all(color: AppColors.cardBorder),
               ),
               child: Text(
-                '3 Assigned Sections',
+                '${_subjectAllocations.length} Assigned Sections',
                 style: AppTypography.caption
                     .copyWith(fontWeight: FontWeight.bold),
               ),
@@ -836,38 +892,54 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         ),
         const SizedBox(height: 12),
 
-        // Cards for allocated classes (Class 8-B Maths, Class 6-A Maths, Class 7-C Maths)
-        _buildSubjectCard(
-          className: 'Class 8-B',
-          classId: 'class-8b',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH',
-          isHomeroom: true,
-          studentCount: 42,
-          schedule: 'Mon, Wed, Fri • P1 (08:00 AM)',
-        ),
-        const SizedBox(height: 12),
-        _buildSubjectCard(
-          className: 'Class 6-A',
-          classId: 'class-6a',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH',
-          isHomeroom: false,
-          studentCount: 38,
-          schedule: 'Tue, Thu, Sat • P2 (08:45 AM)',
-        ),
-        const SizedBox(height: 12),
-        _buildSubjectCard(
-          className: 'Class 7-C',
-          classId: 'class-7c',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH',
-          isHomeroom: false,
-          studentCount: 40,
-          schedule: 'Mon, Tue, Fri • P4 (10:15 AM)',
-        ),
+        if (_subjectAllocations.isEmpty)
+          BentoCard(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'No sections currently allocated for your subject.',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.inkSecondary),
+              ),
+            ),
+          )
+        else
+          ..._subjectAllocations.map((alloc) {
+            final className = alloc['class_name'] as String? ?? 'Class';
+            final classId = alloc['class_section_id'] as String? ?? alloc['class_id'] as String? ?? 'class-8b';
+            final subjectName = alloc['subject_name'] as String? ?? 'Mathematics';
+            final subjectCode = alloc['subject_code'] as String? ?? 'MATH';
+            final isHomeroom = alloc['is_homeroom'] as bool? ?? false;
+            final studentCount = alloc['student_count'] as int? ?? 40;
+            final schedule = alloc['schedule'] as String? ?? 'Scheduled Weekly';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSubjectCard(
+                className: className,
+                classId: classId,
+                subjectName: subjectName,
+                subjectCode: subjectCode,
+                isHomeroom: isHomeroom,
+                studentCount: studentCount,
+                schedule: schedule,
+              ),
+            );
+          }),
       ],
     );
+  }
+
+  IconData _getSubjectIcon(String? code) {
+    final c = code?.toUpperCase() ?? '';
+    if (c.contains('MATH')) return LucideIcons.calculator;
+    if (c.contains('SCI') || c.contains('PHY') || c.contains('CHEM') || c.contains('BIO')) {
+      return LucideIcons.flaskConical;
+    }
+    if (c.contains('ENG')) return LucideIcons.bookOpen;
+    if (c.contains('HIN') || c.contains('SAN')) return LucideIcons.languages;
+    if (c.contains('SST') || c.contains('ECO')) return LucideIcons.globe;
+    if (c.contains('COMP') || c.contains('CS')) return LucideIcons.laptop;
+    return LucideIcons.bookOpen;
   }
 
   Widget _buildSubjectCard({
@@ -896,7 +968,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
-                  child: Icon(LucideIcons.binary,
+                  child: Icon(_getSubjectIcon(subjectCode),
                       color: fg, size: 22),
                 ),
               ),
@@ -976,26 +1048,42 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               ),
               const SizedBox(width: 8),
 
-              // Syllabus Button
+              // Syllabus Button (Opens TeacherSyllabusScreen to edit & publish)
               Expanded(
                 child: TactileFeedback(
                   onTap: () {
-                    context.push(AppRoutes.studentSyllabus);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TeacherSyllabusScreen(
+                          classSectionId: classId,
+                          className: className,
+                          subjectName: subjectName,
+                          subjectCode: subjectCode,
+                        ),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.canvasBackground,
+                      color: AppColors.brandPrimaryLight,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.cardBorder),
+                      border: Border.all(color: AppColors.brandPrimary.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(LucideIcons.bookOpen,
-                            size: 14, color: AppColors.inkSecondary),
+                            size: 14, color: AppColors.brandPrimary),
                         const SizedBox(width: 6),
-                        Text('Syllabus', style: AppTypography.pillLabel),
+                        Text(
+                          'Syllabus',
+                          style: AppTypography.pillLabel.copyWith(
+                            color: AppColors.brandPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),

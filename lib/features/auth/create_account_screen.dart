@@ -40,13 +40,39 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
   final _rollController = TextEditingController();
   final _admissionController = TextEditingController();
   final _parentNameController = TextEditingController();
-  String _selectedHouse = 'red';
 
   // Staff specific
   final _loginCodeController = TextEditingController();
   final _masterKeyController = TextEditingController();
   String _selectedHomeroom = 'class-8b';
+  String _selectedSubject = 'Mathematics';
   bool _isLoading = false;
+
+  static const List<String> _standardSubjects = [
+    'Mathematics',
+    'Science',
+    'English',
+    'Hindi',
+    'Social Science',
+    'Computer Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Economics',
+  ];
+
+  static const Map<String, String> _subjectCodes = {
+    'Mathematics': 'MATH',
+    'Science': 'SCI',
+    'English': 'ENG',
+    'Hindi': 'HIN',
+    'Social Science': 'SST',
+    'Computer Science': 'CS',
+    'Physics': 'PHY',
+    'Chemistry': 'CHEM',
+    'Biology': 'BIO',
+    'Economics': 'ECO',
+  };
 
   @override
   void initState() {
@@ -105,7 +131,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           admissionNo: _admissionController.text.trim().isEmpty ? null : _admissionController.text.trim(),
           parentName: parentName,
           parentPhone: parentPhone,
-          house: _selectedHouse,
+          house: '',
           pin: pin,
         );
 
@@ -159,6 +185,10 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           phone: _phoneController.text.trim(),
           homeroomClassId: _selectedRole == 'teacher' ? _selectedHomeroom : null,
           homeroomClassName: homeroomName,
+          subjectName: _selectedRole == 'teacher' ? _selectedSubject : null,
+          subjectCode: _selectedRole == 'teacher'
+              ? (_subjectCodes[_selectedSubject] ?? 'SUB')
+              : null,
         );
 
         ref.read(currentStaffProvider.notifier).state = staff;
@@ -489,10 +519,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       ),
       const SizedBox(height: 14),
 
-      _fieldLabel('Select School House Shield'),
-      const SizedBox(height: 8),
-      _buildHouseShieldSelector(),
-      const SizedBox(height: 14),
+
 
       _fieldLabel('Create 4-Digit Secret PIN *'),
       const SizedBox(height: 6),
@@ -538,6 +565,34 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
       const SizedBox(height: 14),
 
       if (isTeacher) ...[
+        _fieldLabel('Teaching Subject *'),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.secondarySurface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedSubject,
+              isExpanded: true,
+              items: _standardSubjects.map((sub) {
+                final code = _subjectCodes[sub] ?? 'SUB';
+                return DropdownMenuItem<String>(
+                  value: sub,
+                  child: Text('$sub ($code)'),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedSubject = val);
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
         _fieldLabel('Homeroom Class Assignment'),
         const SizedBox(height: 6),
         Container(
@@ -587,56 +642,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     ];
   }
 
-  Widget _buildHouseShieldSelector() {
-    final houses = [
-      {'id': 'red', 'name': 'Ruby', 'color': const Color(0xFFDC2626), 'bg': const Color(0xFFFEE2E2)},
-      {'id': 'blue', 'name': 'Sapphire', 'color': const Color(0xFF2563EB), 'bg': const Color(0xFFDBEAFE)},
-      {'id': 'green', 'name': 'Emerald', 'color': const Color(0xFF059669), 'bg': const Color(0xFFD1FAE5)},
-      {'id': 'yellow', 'name': 'Topaz', 'color': const Color(0xFFD97706), 'bg': const Color(0xFFFEF3C7)},
-    ];
 
-    return Row(
-      children: houses.map((h) {
-        final isSelected = _selectedHouse == h['id'];
-        final color = h['color'] as Color;
-        final bg = h['bg'] as Color;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: TactileFeedback(
-              onTap: () => setState(() => _selectedHouse = h['id'] as String),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? bg : AppColors.secondarySurface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? color : AppColors.cardBorder,
-                    width: isSelected ? 2.0 : 1.0,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(LucideIcons.shield, color: color, size: 20),
-                    const SizedBox(height: 4),
-                    Text(
-                      h['name'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? color : AppColors.inkSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _inputContainer({
     required TextEditingController controller,

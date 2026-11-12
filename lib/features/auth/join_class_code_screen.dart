@@ -68,41 +68,8 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
   ClassSection? _foundClass;
   bool _isSearching = false;
   String? _searchError;
-  String _selectedHouse = 'red';
   bool _pinObscured = true;
   bool _isSubmitting = false;
-
-  final List<({String key, String name, Color color, Color bg, String gem})>
-      _houses = [
-    (
-      key: 'red',
-      name: 'Red House',
-      gem: 'Ruby Shield',
-      color: AppColors.houseRed,
-      bg: AppColors.houseRedBg,
-    ),
-    (
-      key: 'blue',
-      name: 'Blue House',
-      gem: 'Sapphire Shield',
-      color: AppColors.houseBlue,
-      bg: AppColors.houseBlueBg,
-    ),
-    (
-      key: 'green',
-      name: 'Green House',
-      gem: 'Emerald Shield',
-      color: AppColors.houseGreen,
-      bg: AppColors.houseGreenBg,
-    ),
-    (
-      key: 'yellow',
-      name: 'Yellow House',
-      gem: 'Topaz Shield',
-      color: AppColors.houseYellow,
-      bg: AppColors.houseYellowBg,
-    ),
-  ];
 
   @override
   void initState() {
@@ -206,7 +173,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
             : null,
         parentName: parentName.isNotEmpty ? parentName : 'Parent',
         parentPhone: parentPhone.isNotEmpty ? parentPhone : '+91 98765 00000',
-        house: _selectedHouse,
+        house: '',
         pin: pin,
       );
 
@@ -694,61 +661,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
           ),
           const SizedBox(height: 20),
 
-          // House Color Picker (4 Colored Shields)
-          Text('Select Student House', style: AppTypography.titleSmall),
-          const SizedBox(height: 4),
-          Text(
-            'Assigned by school (Red Ruby, Blue Sapphire, Green Emerald, Yellow Topaz)',
-            style: AppTypography.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: _houses.map((house) {
-              final isSelected = _selectedHouse == house.key;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: TactileFeedback(
-                    onTap: () {
-                      setState(() => _selectedHouse = house.key);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? house.bg : AppColors.secondarySurface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected ? house.color : Colors.transparent,
-                          width: 2.0,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            LucideIcons.shield,
-                            color: house.color,
-                            size: 24,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            house.name.split(' ')[0],
-                            style: GoogleFonts.plusJakartaSans(
-                              color: house.color,
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
+
 
           // 4-Digit Secret PIN
           Text('4-Digit Secret Login PIN', style: AppTypography.titleSmall),

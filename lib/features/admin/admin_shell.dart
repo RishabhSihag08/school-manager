@@ -1,10 +1,14 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/config/app_config.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
+import '../../core/repositories/school_repository.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -15,12 +19,13 @@ import '../../core/widgets/tactile_feedback.dart';
 import 'excel_upload_wizard.dart';
 
 /// Responsive Desktop & Web Admin Shell with Sidebar Navigation:
-/// 1. Classes & Sections
-/// 2. Subject Allocation Matrix
-/// 3. 3-Step Excel Wizard
-/// 4. Announcements Hub
-/// 5. Timetable Builder
-/// 6. Settings / OTA Release Dashboard
+/// 1. Classes & Sections (with + Create New Class Section)
+/// 2. Student Directory (Search, Class Filter, Full Edit Modal)
+/// 3. Subject Allocation Matrix
+/// 4. 3-Step Excel Wizard
+/// 5. Announcements Hub
+/// 6. Timetable Builder
+/// 7. Settings / OTA Release Dashboard
 class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({super.key});
 
@@ -31,14 +36,26 @@ class AdminShell extends ConsumerStatefulWidget {
 class _AdminShellState extends ConsumerState<AdminShell> {
   int _selectedNavIndex = 0;
   bool _isLoading = false;
+  bool _isLoadingStudents = false;
 
   final List<ClassSection> _classes = [];
   final List<Announcement> _announcements = [];
+  final List<Student> _allStudents = [];
+
+  String _selectedClassFilterId = 'all';
+  String _studentSearchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadAdminData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAdminData() async {
@@ -47,15 +64,181 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final classes = await repo.getAllClassSections();
     final announcements = await repo.getAnnouncements();
 
+    final allStudents = <Student>[];
+    for (final cls in classes) {
+      try {
+        final classStudents = await repo.getStudentsForClass(cls.id);
+        allStudents.addAll(classStudents);
+      } catch (_) {}
+    }
+
     if (mounted) {
       setState(() {
         _classes.clear();
         _classes.addAll(classes);
         _announcements.clear();
         _announcements.addAll(announcements);
+        _allStudents.clear();
+        _allStudents.addAll(allStudents);
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadStudents() async {
+    setState(() => _isLoadingStudents = true);
+    final repo = ref.read(schoolRepositoryProvider);
+    final allStudents = <Student>[];
+    for (final cls in _classes) {
+      try {
+        final classStudents = await repo.getStudentsForClass(cls.id);
+        allStudents.addAll(classStudents);
+      } catch (_) {}
+    }
+    if (mounted) {
+      setState(() {
+        _allStudents.clear();
+        _allStudents.addAll(allStudents);
+        _isLoadingStudents = false;
+      });
+    }
+  }
+
+  String _generateClassCode(int grade, String section) {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    final rnd = Random();
+    final suffix = String.fromCharCodes(
+      Iterable.generate(4, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))),
+    );
+    return '$grade${section.toUpperCase()}-$suffix';
+  }
+
+  Future<ClassSection> _createClassSection(
+    SchoolRepository repo, {
+    required int grade,
+    required String section,
+    required String classCode,
+    String? classTeacherName,
+  }) async {
+    try {
+      return await repo.createClassSection(
+        grade: grade,
+        section: section,
+        classCode: classCode,
+        classTeacherName: classTeacherName,
+      );
+    } catch (_) {}
+
+    if (AppConfig.hasSupabaseCredentials) {
+      final client = Supabase.instance.client;
+      String? academicYearId;
+      try {
+        final yr = await client
+            .from('academic_years')
+            .select('id')
+            .eq('is_active', true)
+            .maybeSingle();
+        if (yr != null && yr['id'] != null) {
+          academicYearId = yr['id'] as String;
+        } else {
+          final anyYr = await client
+              .from('academic_years')
+              .select('id')
+              .limit(1)
+              .maybeSingle();
+          if (anyYr != null && anyYr['id'] != null) {
+            academicYearId = anyYr['id'] as String;
+          }
+        }
+      } catch (_) {}
+
+      final insertData = <String, dynamic>{
+        'grade': grade,
+        'section': section.toUpperCase(),
+        'class_code': classCode.toUpperCase(),
+        'is_code_locked': false,
+      };
+      if (academicYearId != null) {
+        insertData['academic_year_id'] = academicYearId;
+      }
+      if (classTeacherName != null && classTeacherName.isNotEmpty) {
+        insertData['class_teacher_name'] = classTeacherName;
+      }
+
+      final res = await client
+          .from('class_sections')
+          .insert(insertData)
+          .select()
+          .single();
+      return ClassSection.fromJson(res);
+    }
+
+    final newClass = ClassSection(
+      id: 'class-$grade${section.toLowerCase()}-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      grade: grade,
+      section: section.toUpperCase(),
+      classTeacherName: classTeacherName,
+      classCode: classCode.toUpperCase(),
+      academicYear: AppConfig.currentAcademicYear,
+    );
+    return newClass;
+  }
+
+  Future<Student> _updateStudent(
+    SchoolRepository repo,
+    Student student,
+  ) async {
+    try {
+      return await repo.updateStudent(student);
+    } catch (_) {}
+
+    if (AppConfig.hasSupabaseCredentials) {
+      final client = Supabase.instance.client;
+      final payload = <String, dynamic>{
+        'full_name': student.fullName,
+        'roll_no': student.rollNo,
+        'admission_no': student.admissionNo,
+        'class_section_id': student.classSectionId,
+        'parent_name': student.parentName,
+        'parent_phone': student.parentPhone,
+        'pin_hash': student.pinHash,
+      };
+      final res = await client
+          .from('students')
+          .update(payload)
+          .eq('id', student.id)
+          .select()
+          .single();
+      return Student.fromJson(res);
+    }
+
+    return student;
+  }
+
+  List<Student> get _filteredStudents {
+    return _allStudents.where((s) {
+      if (_selectedClassFilterId != 'all' &&
+          s.classSectionId != _selectedClassFilterId) {
+        return false;
+      }
+      if (_studentSearchQuery.trim().isNotEmpty) {
+        final q = _studentSearchQuery.trim().toLowerCase();
+        final nameMatch = s.fullName.toLowerCase().contains(q);
+        final rollMatch = s.rollNo.toString().contains(q);
+        final admMatch = (s.admissionNo ?? '').toLowerCase().contains(q);
+        final phoneMatch = s.parentPhone.toLowerCase().contains(q);
+        final parentMatch = s.parentName.toLowerCase().contains(q);
+        return nameMatch || rollMatch || admMatch || phoneMatch || parentMatch;
+      }
+      return true;
+    }).toList();
+  }
+
+  String _getClassName(String classSectionId) {
+    for (final cls in _classes) {
+      if (cls.id == classSectionId) return cls.displayName;
+    }
+    return 'Class $classSectionId';
   }
 
   @override
@@ -72,7 +255,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
               elevation: 0,
               title: Text('School Manager Admin', style: AppTypography.titleLarge),
               actions: [
-                _buildRoleSwitchChip(),
+                _buildLogoutButton(isCompact: true),
                 IconButton(
                   icon: const Icon(LucideIcons.settings,
                       color: AppColors.inkPrimary),
@@ -113,10 +296,14 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       children: [
         // School Branding Header
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: SchoolManagerLogo.horizontal(
-            iconSize: 38,
-            subtitle: 'Office Admin Shell',
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: SchoolManagerLogo.horizontal(
+              iconSize: 34,
+              subtitle: 'Office Admin Shell',
+            ),
           ),
         ),
 
@@ -127,20 +314,23 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             children: [
-              _navItem(0, 'Classes & Sections', LucideIcons.layoutGrid),
-              _navItem(1, 'Subject Matrix', LucideIcons.layers),
-              _navItem(2, 'Excel Marks Wizard', LucideIcons.fileSpreadsheet,
+              _navItem(0, 'Classes & Sections', LucideIcons.layoutGrid,
+                  badge: '${_classes.length}'),
+              _navItem(1, 'Student Directory', LucideIcons.users,
+                  badge: '${_allStudents.length}'),
+              _navItem(2, 'Subject Matrix', LucideIcons.layers),
+              _navItem(3, 'Excel Marks Wizard', LucideIcons.fileSpreadsheet,
                   badge: 'Step 1-3'),
-              _navItem(3, 'Announcements Hub', LucideIcons.megaphone),
-              _navItem(4, 'Timetable Builder', LucideIcons.calendar),
-              _navItem(5, 'Settings & OTA Release', LucideIcons.sparkles),
+              _navItem(4, 'Announcements Hub', LucideIcons.megaphone),
+              _navItem(5, 'Timetable Builder', LucideIcons.calendar),
+              _navItem(6, 'Settings & OTA Release', LucideIcons.sparkles),
             ],
           ),
         ),
 
         const Divider(height: 1, color: AppColors.cardBorder),
 
-        // Bottom User Profile & Switcher
+        // Bottom User Profile & Logout
         Container(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -175,30 +365,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                 ],
               ),
               const SizedBox(height: 12),
-              TactileFeedback(
-                onTap: () {
-                  ref.read(activeRoleProvider.notifier).state = 'teacher';
-                  context.go(AppRoutes.teacherDashboard);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.canvasBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.cardBorder),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(LucideIcons.userCheck,
-                          size: 14, color: AppColors.brandPrimary),
-                      const SizedBox(width: 6),
-                      Text('Switch to Teacher Dashboard',
-                          style: AppTypography.pillLabel),
-                    ],
-                  ),
-                ),
-              ),
+              _buildLogoutButton(isCompact: false),
             ],
           ),
         ),
@@ -275,32 +442,80 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     );
   }
 
-  Widget _buildRoleSwitchChip() {
+  Widget _buildLogoutButton({bool isCompact = false}) {
     return TactileFeedback(
-      onTap: () async {
-        final router = GoRouter.of(context);
-        await SessionService.clearSession();
-        ref.read(currentStaffProvider.notifier).state = null;
-        router.go(AppRoutes.onboarding);
-      },
+      onTap: () => _confirmLogout(context),
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        margin: EdgeInsets.symmetric(
+            vertical: isCompact ? 8 : 4, horizontal: isCompact ? 8 : 0),
+        padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 10 : 12, vertical: isCompact ? 6 : 9),
         decoration: BoxDecoration(
-          color: AppColors.cardSurface,
+          color: AppColors.dangerBg,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.cardBorder),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(LucideIcons.logOut,
-                size: 14, color: AppColors.inkSecondary),
-            const SizedBox(width: 4),
-            Text('Switch Role', style: AppTypography.pillLabel),
+            const Icon(LucideIcons.logOut, size: 14, color: AppColors.danger),
+            const SizedBox(width: 6),
+            Text(
+              'Log Out',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.danger,
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(LucideIcons.logOut, color: AppColors.danger, size: 22),
+            const SizedBox(width: 10),
+            Text('Log Out', style: AppTypography.titleMedium),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of School Manager?',
+          style: TextStyle(color: AppColors.inkPrimary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final router = GoRouter.of(context);
+      await SessionService.clearSession();
+      ref.read(currentStaffProvider.notifier).state = null;
+      ref.read(activeRoleProvider.notifier).state = 'student';
+      router.go(AppRoutes.onboarding);
+    }
   }
 
   Widget _buildSelectedView() {
@@ -308,14 +523,16 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       case 0:
         return _buildClassesAndSectionsView();
       case 1:
-        return _buildSubjectAllocationMatrixView();
+        return _buildStudentDirectoryView();
       case 2:
-        return const ExcelUploadWizard();
+        return _buildSubjectAllocationMatrixView();
       case 3:
-        return _buildAnnouncementsHubView();
+        return const ExcelUploadWizard();
       case 4:
-        return _buildTimetableBuilderView();
+        return _buildAnnouncementsHubView();
       case 5:
+        return _buildTimetableBuilderView();
+      case 6:
       default:
         return _buildSettingsAndOtaView();
     }
@@ -331,134 +548,1170 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Classes & Sections Management',
-                    style: AppTypography.headlineSmall),
-                Text(
-                  'Manage Class Join Codes, Homeroom Teachers, and Student Enrollment Rosters',
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.inkSecondary),
-                ),
-              ],
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Class Sections are synced with academic year 2026-27.'),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Classes & Sections Management',
+                      style: AppTypography.headlineSmall),
+                  Text(
+                    'Manage Class Join Codes, Homeroom Teachers, and Student Enrollment Rosters',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
                   ),
-                );
-              },
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: _openCreateClassDialog,
               icon: const Icon(LucideIcons.plus, size: 16),
-              label: const Text('Add Class Section'),
+              label: const Text('+ Create New Class / Section'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandPrimary,
                 foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
             ),
           ],
         ),
         const SizedBox(height: 20),
 
-        ..._classes.map((cls) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: BentoCard(
-              padding: const EdgeInsets.all(18),
-              child: Row(
+        if (_classes.isEmpty)
+          BentoCard(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppColors.brandPrimaryLight,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${cls.grade}-${cls.section}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppColors.brandPrimary,
+                  const Icon(LucideIcons.layoutGrid,
+                      size: 40, color: AppColors.inkSecondary),
+                  const SizedBox(height: 12),
+                  Text('No Class Sections Found',
+                      style: AppTypography.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Click "+ Create New Class / Section" above to establish grade sections.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ..._classes.map((cls) {
+            final classStudents =
+                _allStudents.where((s) => s.classSectionId == cls.id).toList();
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: BentoCard(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.brandPrimaryLight,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${cls.grade}-${cls.section}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.brandPrimary,
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(cls.displayName,
+                                  style: AppTypography.titleMedium),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.canvasBackground,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border:
+                                      Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Text(
+                                  '${classStudents.length} Students',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.inkSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
+                            style: AppTypography.caption,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Join Code Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.canvasBackground,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.ticket,
+                              size: 14, color: AppColors.brandPrimary),
+                          const SizedBox(width: 6),
+                          Text(
+                            cls.classCode,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.inkPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Lock status chip
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: cls.isCodeLocked
+                            ? const Color(0xFFFEF3C7)
+                            : const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        cls.isCodeLocked ? 'Locked' : 'Open',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: cls.isCodeLocked
+                              ? AppColors.warning
+                              : AppColors.success,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // View Roster quick button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _selectedClassFilterId = cls.id;
+                          _selectedNavIndex = 1;
+                        });
+                      },
+                      icon: const Icon(LucideIcons.users, size: 14),
+                      label: const Text('View Roster'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  void _openCreateClassDialog() {
+    int selectedGrade = 9;
+    String selectedSection = 'A';
+    final codeCtrl = TextEditingController(
+      text: _generateClassCode(9, 'A'),
+    );
+    final teacherNameCtrl = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.cardSurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(LucideIcons.plus,
+                        color: AppColors.brandPrimary, size: 20),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
+                  Text('Create New Class / Section',
+                      style: AppTypography.titleMedium),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 440,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select grade (1st to 12th), section letter, unique class join code, and optional homeroom teacher.',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.inkSecondary),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Grade & Section Selectors using InputDecorator + DropdownButton to avoid deprecation warnings
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Grade / Standard *',
+                                prefixIcon: const Icon(LucideIcons.graduationCap,
+                                    size: 18),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<int>(
+                                  value: selectedGrade,
+                                  isExpanded: true,
+                                  items: List.generate(12, (index) {
+                                    final g = index + 1;
+                                    return DropdownMenuItem<int>(
+                                      value: g,
+                                      child: Text('Class $g'),
+                                    );
+                                  }),
+                                  onChanged: isSubmitting
+                                      ? null
+                                      : (val) {
+                                          if (val != null) {
+                                            setDialogState(() {
+                                              selectedGrade = val;
+                                              codeCtrl.text = _generateClassCode(
+                                                  selectedGrade, selectedSection);
+                                            });
+                                          }
+                                        },
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Section Selector
+                          SizedBox(
+                            width: 120,
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Section *',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedSection,
+                                  isExpanded: true,
+                                  items: ['A', 'B', 'C', 'D', 'E', 'F']
+                                      .map((sec) => DropdownMenuItem(
+                                            value: sec,
+                                            child: Text('Sec $sec'),
+                                          ))
+                                      .toList(),
+                                  onChanged: isSubmitting
+                                      ? null
+                                      : (val) {
+                                          if (val != null) {
+                                            setDialogState(() {
+                                              selectedSection = val;
+                                              codeCtrl.text = _generateClassCode(
+                                                  selectedGrade, selectedSection);
+                                            });
+                                          }
+                                        },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Class Join Code with Regenerate button
+                      TextFormField(
+                        controller: codeCtrl,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          labelText: 'Class Join Code (6-8 chars) *',
+                          hintText: 'e.g. 9A-K4P2',
+                          helperText:
+                              'Students use this unique code on the welcome screen to enroll.',
+                          prefixIcon:
+                              const Icon(LucideIcons.ticket, size: 18),
+                          suffixIcon: IconButton(
+                            icon: const Icon(LucideIcons.refreshCw, size: 16),
+                            tooltip: 'Generate new random code',
+                            onPressed: isSubmitting
+                                ? null
+                                : () {
+                                    setDialogState(() {
+                                      codeCtrl.text = _generateClassCode(
+                                          selectedGrade, selectedSection);
+                                    });
+                                  },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Optional Homeroom Class Teacher
+                      TextFormField(
+                        controller: teacherNameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Homeroom Teacher Name (Optional)',
+                          hintText: 'e.g. Mrs. Sunita Rao',
+                          prefixIcon: const Icon(LucideIcons.user, size: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final code = codeCtrl.text.trim().toUpperCase();
+                          if (code.isEmpty) {
+                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter or generate a Class Code'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSubmitting = true);
+
+                          try {
+                            final repo = ref.read(schoolRepositoryProvider);
+                            final teacherName = teacherNameCtrl.text.trim();
+
+                            final created = await _createClassSection(
+                              repo,
+                              grade: selectedGrade,
+                              section: selectedSection,
+                              classCode: code,
+                              classTeacherName: teacherName.isNotEmpty
+                                  ? teacherName
+                                  : null,
+                            );
+
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
+
+                            if (mounted) {
+                              if (!_classes.any((c) => c.id == created.id)) {
+                                _classes.add(created);
+                              }
+                              await _loadAdminData();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Class $selectedGrade-$selectedSection created! Join code: $code'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSubmitting = false);
+                            if (dialogCtx.mounted) {
+                              ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to create class: $e'),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Create Class'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: STUDENT DIRECTORY & EDITING
+  // ==========================================
+  Widget _buildStudentDirectoryView() {
+    final filtered = _filteredStudents;
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        // Header Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Student Directory & Records',
+                      style: AppTypography.headlineSmall),
+                  Text(
+                    'Search, view, and modify student profiles, roll numbers, assigned classes, parent contacts, and login PINs.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.brandPrimaryLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Showing ${filtered.length} of ${_allStudents.length} Students',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                  color: AppColors.brandPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Filter and Search Toolbar
+        BentoCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              // Search Input
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    setState(() => _studentSearchQuery = val);
+                  },
+                  decoration: InputDecoration(
+                    hintText:
+                        'Search by name, roll no, admission no, or phone...',
+                    hintStyle: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkMuted),
+                    prefixIcon:
+                        const Icon(LucideIcons.search, size: 18),
+                    suffixIcon: _studentSearchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(LucideIcons.x, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _studentSearchQuery = '');
+                            },
+                          )
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.cardBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.cardBorder),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Class Filter Dropdown using InputDecorator to avoid deprecation warning
+              Expanded(
+                flex: 2,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Filter Class',
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.cardBorder),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedClassFilterId,
+                      isDense: true,
+                      isExpanded: true,
+                      items: [
+                        DropdownMenuItem<String>(
+                          value: 'all',
+                          child: Text('All Classes (${_allStudents.length})'),
+                        ),
+                        ..._classes.map((cls) {
+                          final count = _allStudents
+                              .where((s) => s.classSectionId == cls.id)
+                              .length;
+                          return DropdownMenuItem<String>(
+                            value: cls.id,
+                            child: Text('${cls.displayName} ($count)'),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        setState(() => _selectedClassFilterId = val ?? 'all');
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Reload Students button
+              IconButton(
+                tooltip: 'Refresh Student Roster',
+                icon: _isLoadingStudents
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.brandPrimary,
+                        ),
+                      )
+                    : const Icon(LucideIcons.refreshCw,
+                        size: 18, color: AppColors.brandPrimary),
+                onPressed: _isLoadingStudents ? null : _loadStudents,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Students List / Empty state
+        if (_isLoadingStudents)
+          const Padding(
+            padding: EdgeInsets.all(40),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.brandPrimary),
+            ),
+          )
+        else if (filtered.isEmpty)
+          BentoCard(
+            padding: const EdgeInsets.all(40),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(LucideIcons.userX,
+                      size: 44, color: AppColors.inkSecondary),
+                  const SizedBox(height: 12),
+                  Text('No Students Found', style: AppTypography.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    _studentSearchQuery.isNotEmpty
+                        ? 'No students match "$_studentSearchQuery" in the selected class filter.'
+                        : 'No students enrolled in this class section yet.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                  if (_studentSearchQuery.isNotEmpty ||
+                      _selectedClassFilterId != 'all') ...[
+                    const SizedBox(height: 16),
+                    OutlinedButton(
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _studentSearchQuery = '';
+                          _selectedClassFilterId = 'all';
+                        });
+                      },
+                      child: const Text('Clear Filters'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          )
+        else
+          ...filtered.map((student) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: BentoCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    // Avatar Initials
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.brandPrimaryLight,
+                        border: Border.all(
+                            color: AppColors.brandPrimary.withValues(alpha: 0.2)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          student.fullName.isNotEmpty
+                              ? student.fullName
+                                  .trim()
+                                  .split(' ')
+                                  .map((e) => e.isNotEmpty ? e[0] : '')
+                                  .take(2)
+                                  .join()
+                                  .toUpperCase()
+                              : 'ST',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppColors.brandPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+
+                    // Student Details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(student.fullName,
+                                  style: AppTypography.titleMedium),
+                              const SizedBox(width: 8),
+                              // Roll No Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.canvasBackground,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border:
+                                      Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Text(
+                                  'Roll #${student.rollNo}',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.inkPrimary,
+                                  ),
+                                ),
+                              ),
+                              if (student.admissionNo != null &&
+                                  student.admissionNo!.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.canvasBackground,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: AppColors.cardBorder),
+                                  ),
+                                  child: Text(
+                                    student.admissionNo!,
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 10.5,
+                                      color: AppColors.inkSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              // Class Badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandPrimaryLight,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _getClassName(student.classSectionId),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.brandPrimary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Parent Phone
+                              const Icon(LucideIcons.phone,
+                                  size: 13, color: AppColors.inkSecondary),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${student.parentName} (${student.parentPhone})',
+                                style: AppTypography.caption,
+                              ),
+                              const SizedBox(width: 14),
+                              // PIN indicator
+                              const Icon(LucideIcons.keyRound,
+                                  size: 13, color: AppColors.inkSecondary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'PIN: ${student.pinHash}',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 11,
+                                  color: AppColors.inkSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Edit Button
+                    ElevatedButton.icon(
+                      onPressed: () => _openEditStudentDialog(student),
+                      icon: const Icon(LucideIcons.pencil, size: 14),
+                      label: const Text('Edit Student'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cardSurface,
+                        foregroundColor: AppColors.brandPrimary,
+                        elevation: 0,
+                        side: const BorderSide(color: AppColors.brandPrimary),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  void _openEditStudentDialog(Student student) {
+    final nameCtrl = TextEditingController(text: student.fullName);
+    final rollCtrl = TextEditingController(text: student.rollNo.toString());
+    final admCtrl = TextEditingController(text: student.admissionNo ?? '');
+    final parentNameCtrl = TextEditingController(text: student.parentName);
+    final parentPhoneCtrl = TextEditingController(text: student.parentPhone);
+    final pinCtrl = TextEditingController(text: student.pinHash);
+    String selectedClassId = student.classSectionId;
+    bool obscurePin = true;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !isSaving,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final activeClassId = _classes.any((c) => c.id == selectedClassId)
+                ? selectedClassId
+                : (_classes.isNotEmpty ? _classes.first.id : '');
+
+            return AlertDialog(
+              backgroundColor: AppColors.cardSurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimaryLight,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(LucideIcons.userCheck,
+                        color: AppColors.brandPrimary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(cls.displayName, style: AppTypography.titleMedium),
-                        const SizedBox(height: 2),
+                        Text('Edit Student Profile',
+                            style: AppTypography.titleMedium),
                         Text(
-                          'Class Teacher: ${cls.classTeacherName ?? "Unassigned"}',
+                          'ID: ${student.id}',
                           style: AppTypography.caption,
                         ),
                       ],
                     ),
                   ),
-                  // Join Code Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.canvasBackground,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(LucideIcons.ticket,
-                            size: 14, color: AppColors.brandPrimary),
-                        const SizedBox(width: 6),
-                        Text(
-                          cls.classCode,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.inkPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Lock status chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: cls.isCodeLocked
-                          ? const Color(0xFFFEF3C7)
-                          : const Color(0xFFD1FAE5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      cls.isCodeLocked ? 'Locked' : 'Open',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: cls.isCodeLocked
-                            ? AppColors.warning
-                            : AppColors.success,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-            ),
-          );
-        }),
-      ],
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 480,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Full Name
+                      TextFormField(
+                        controller: nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Full Name *',
+                          prefixIcon: const Icon(LucideIcons.user, size: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Roll Number & Admission Number Row
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: TextFormField(
+                              controller: rollCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Roll No *',
+                                prefixIcon:
+                                    const Icon(LucideIcons.hash, size: 18),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: admCtrl,
+                              decoration: InputDecoration(
+                                labelText: 'Admission Number',
+                                hintText: 'e.g. ADM2026101',
+                                prefixIcon: const Icon(LucideIcons.fileText,
+                                    size: 18),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Assigned Class Section using InputDecorator
+                      InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Assigned Class Section *',
+                          prefixIcon:
+                              const Icon(LucideIcons.layoutGrid, size: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: activeClassId.isNotEmpty ? activeClassId : null,
+                            isExpanded: true,
+                            items: _classes.map((cls) {
+                              return DropdownMenuItem<String>(
+                                value: cls.id,
+                                child: Text(cls.displayName),
+                              );
+                            }).toList(),
+                            onChanged: isSaving
+                                ? null
+                                : (val) {
+                                    if (val != null) {
+                                      setDialogState(() => selectedClassId = val);
+                                    }
+                                  },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Parent Name
+                      TextFormField(
+                        controller: parentNameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Parent / Guardian Name *',
+                          prefixIcon: const Icon(LucideIcons.users, size: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Parent Phone
+                      TextFormField(
+                        controller: parentPhoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'Parent Mobile Phone Number *',
+                          hintText: '+919876543210',
+                          prefixIcon: const Icon(LucideIcons.phone, size: 18),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 4-Digit Secret PIN
+                      TextFormField(
+                        controller: pinCtrl,
+                        obscureText: obscurePin,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: InputDecoration(
+                          labelText: 'Student Login PIN (4 digits) *',
+                          counterText: '',
+                          helperText:
+                              'Admin can reset or update the student login PIN here.',
+                          prefixIcon:
+                              const Icon(LucideIcons.keyRound, size: 18),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  obscurePin
+                                      ? LucideIcons.eye
+                                      : LucideIcons.eyeOff,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  setDialogState(
+                                      () => obscurePin = !obscurePin);
+                                },
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  setDialogState(() => pinCtrl.text = '1234');
+                                },
+                                child: const Text('Reset',
+                                    style: TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isSaving ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          final rollText = rollCtrl.text.trim();
+                          final roll = int.tryParse(rollText);
+                          final adm = admCtrl.text.trim();
+                          final parentName = parentNameCtrl.text.trim();
+                          final parentPhone = parentPhoneCtrl.text.trim();
+                          final pin = pinCtrl.text.trim();
+
+                          if (name.isEmpty) {
+                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter student name'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
+                          if (roll == null) {
+                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a valid numeric roll number'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
+                          if (pin.isEmpty) {
+                            ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter a 4-digit PIN'),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+
+                          final updatedStudent = student.copyWith(
+                            fullName: name,
+                            rollNo: roll,
+                            admissionNo: adm.isNotEmpty ? adm : null,
+                            classSectionId: selectedClassId,
+                            parentName: parentName,
+                            parentPhone: parentPhone,
+                            pinHash: pin,
+                          );
+
+                          try {
+                            final repo = ref.read(schoolRepositoryProvider);
+                            final saved = await _updateStudent(repo, updatedStudent);
+
+                            final idx = _allStudents
+                                .indexWhere((s) => s.id == saved.id);
+                            if (idx != -1) {
+                              _allStudents[idx] = saved;
+                            }
+
+                            if (dialogCtx.mounted) {
+                              Navigator.pop(dialogCtx);
+                            }
+
+                            if (mounted) {
+                              await _loadStudents();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Student "${saved.fullName}" updated successfully!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSaving = false);
+                            if (dialogCtx.mounted) {
+                              ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to update student: $e'),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                  ),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   // ==========================================
-  // VIEW 2: SUBJECT ALLOCATION MATRIX
+  // VIEW 3: SUBJECT ALLOCATION MATRIX
   // ==========================================
   Widget _buildSubjectAllocationMatrixView() {
     final matrixData = [
@@ -565,18 +1818,21 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Announcements & Circulars Hub',
-                    style: AppTypography.headlineSmall),
-                Text(
-                  'Post school-wide holiday notices, exam alerts, and urgent broadcasts.',
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.inkSecondary),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Announcements & Circulars Hub',
+                      style: AppTypography.headlineSmall),
+                  Text(
+                    'Post school-wide holiday notices, exam alerts, and urgent broadcasts.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 12),
             ElevatedButton.icon(
               onPressed: _openCreateAnnouncementDialog,
               icon: const Icon(LucideIcons.plus, size: 16),
@@ -612,7 +1868,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          isHoliday ? '🏖️ HOLIDAY CIRCULAR' : '📢 ${a.category.name.toUpperCase()}',
+                          isHoliday
+                              ? '🏖️ HOLIDAY CIRCULAR'
+                              : '📢 ${a.category.name.toUpperCase()}',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 10.5,
                             fontWeight: FontWeight.bold,
@@ -694,7 +1952,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                     value: isPinned,
                     onChanged: (val) =>
                         setDialogState(() => isPinned = val ?? false),
-                    title: const Text('Pin as Top Hero Banner for all students'),
+                    title:
+                        const Text('Pin as Top Hero Banner for all students'),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ],

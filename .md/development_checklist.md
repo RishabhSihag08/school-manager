@@ -92,4 +92,19 @@ Use this phased checklist to track your progress from zero to handing over the f
 - [x] Verify zero hardcoded school names (neutral `School Manager` ecosystem).
 - [x] Remove all test bypasses and test controls; production ready.
 - [x] Publish GitHub Releases with release APK attached (`v1.0.2`).
-- [ ] End-to-end verification of Master Key, Single Onboarding, Persistent Session, and Mandatory In-App Update Gate on physical Samsung Galaxy S24.
+- [x] End-to-end verification of Master Key, Single Onboarding, Persistent Session, and Mandatory In-App Update Gate on physical Samsung Galaxy S24 (`v1.0.3`).
+
+---
+
+## Phase 7: Comprehensive 10 Fixes & Supabase Sync (`v1.0.4`)
+- [x] **Problem 1 (Supabase Integration)**: Wired `SupabaseSchoolRepository` into `core_providers.dart` when `.env` credentials exist; implements PostgREST queries across all tables (`profiles`, `class_sections`, `students`, `attendance`, `homeworks`, `syllabi`, `exams`, `announcements`) with offline fallback.
+- [x] **Problem 2 (Excel Sheet Download & Open)**: Generates CBSE mark entry `.xlsx` templates, writes them directly to device storage via `path_provider`, launches system spreadsheet viewer with `OpenFilex`, and displays confirmation SnackBar with retry/open and share buttons.
+- [x] **Problem 3 (Teacher Subject Selection)**: Teachers select their teaching subject (e.g. Mathematics, Science, English, etc.) during registration in `CreateAccountScreen`, persisting the specialization to their profile.
+- [x] **Problem 4 (House Shield Removal)**: Completely removed the house shield system, color rings, gem selectors, and badges across all student views, attendance, PDF report cards, and models.
+- [x] **Problem 5 (Teacher Syllabus & Subject Filtering)**: Created `TeacherSyllabusScreen` allowing subject teachers to add, edit, reorder, and complete chapters, writing directly to Supabase (`repository.saveSyllabus`), and filtered `TeacherDashboard` allocations to only display classes matching their assigned subject.
+- [x] **Problem 6 (Logout Replacing Switch)**: Replaced confusing "Switch" chip with prominent red "Log Out" button and `SessionService.confirmAndLogout(...)` dialog across Settings, Teacher Dashboard, and Admin Shell.
+- [x] **Problem 7 (Admin Class Creation)**: Built "+ Create New Class / Section" dialog in `AdminShell` with grade and section selection, unique 6-character class code generation (e.g. `9A-K4P2`), homeroom teacher assignment, and instant live roster refresh.
+- [x] **Problem 8 (Admin Student Directory & Data Editing)**: Built dedicated Student Directory tab with live search and class filtering, and comprehensive "Edit Student" dialog (Name, Roll, Admission No, Class reassignment, Parent Name, Parent Phone, and 4-digit PIN toggle/reset) saving to Supabase.
+- [x] **Problem 9 (Zero Dummy Data)**: Purged all hardcoded dummy data and mock fallbacks (`Aarav Sharma`, sample records) from the repository and student views, showing real data and clean empty states.
+- [x] **Problem 10 (Two-Step Guided Onboarding)**: Redesigned onboarding into a clean two-step flow: Step 1 asks "What are you?" with 3 Bento role cards (Student/Parent, Teacher/Faculty, Staff/Admin), and Step 2 presents focused choices to "Log In to Existing Account" or "Create New Account".
+- [x] **Verification & Release**: 0 analyzer issues, 56/56 unit and widget tests passing, APK built and installed to Samsung Galaxy S24, and GitHub release `v1.0.4` published.

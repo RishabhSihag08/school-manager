@@ -270,7 +270,7 @@ class ReportCardPdfService {
                 infoCell('Student Name', student.fullName),
                 infoCell('Roll Number', student.rollNo.toString()),
                 infoCell('Class & Section', classSection.displayName),
-                infoCell('House', '${student.house.toUpperCase()} HOUSE'),
+                infoCell('Academic Session', '2026-2027'),
               ],
             ),
           ),

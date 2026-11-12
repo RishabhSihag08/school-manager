@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:printing/printing.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/excel_service.dart';
@@ -36,6 +40,8 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
   double _maxMarks = 100.0;
   bool _isGeneratingTemplate = false;
   Uint8List? _lastGeneratedBytes;
+  String? _lastGeneratedFilePath;
+  String? _lastGeneratedFileName;
 
   // Step 2 & 3 State
   String? _uploadedFileName;
@@ -63,45 +69,179 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
     setState(() => _isGeneratingTemplate = true);
     HapticFeedback.lightImpact();
 
-    final repo = ref.read(schoolRepositoryProvider);
-    final students = await repo.getStudentsForClass(_selectedClassId);
+    try {
+      final repo = ref.read(schoolRepositoryProvider);
+      final students = await repo.getStudentsForClass(_selectedClassId);
 
-    final bytes = _excelService.generateTemplate(
-      examId: _selectedExamId,
-      examName: _selectedExamName,
-      classSectionId: _selectedClassId,
-      className: _selectedClassName,
-      students: students,
-      subjects: _subjects,
-      maxMarks: _maxMarks,
-    );
+      final bytes = _excelService.generateTemplate(
+        examId: _selectedExamId,
+        examName: _selectedExamName,
+        classSectionId: _selectedClassId,
+        className: _selectedClassName,
+        students: students,
+        subjects: _subjects,
+        maxMarks: _maxMarks,
+      );
 
-    setState(() {
-      _lastGeneratedBytes = bytes;
-      _isGeneratingTemplate = false;
-    });
+      final sanitizedClass =
+          _selectedClassName.replaceAll(' ', '_').replaceAll('/', '_');
+      final sanitizedExam =
+          _selectedExamName.replaceAll(' ', '_').replaceAll('/', '_');
+      final fileName = '${sanitizedClass}_${sanitizedExam}_template.xlsx';
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.fileSpreadsheet,
-                color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Pre-filled template generated for $_selectedClassName (${students.length} students enrolled)!',
-                style: AppTypography.bodySmall.copyWith(color: Colors.white),
+      // Save generated Uint8List bytes to a real file in temporary directory
+      final tempDir = await getTemporaryDirectory();
+      final filePath = '${tempDir.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes, flush: true);
+
+      setState(() {
+        _lastGeneratedBytes = bytes;
+        _lastGeneratedFilePath = filePath;
+        _lastGeneratedFileName = fileName;
+        _isGeneratingTemplate = false;
+      });
+
+      // Directly open the spreadsheet in native spreadsheet viewer (Excel / Google Sheets / WPS Office)
+      await _openExcelFile(filePath);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 8),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(LucideIcons.fileSpreadsheet,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Template downloaded & opened! (${students.length} students enrolled)',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                filePath,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 10.5,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'Re-open Excel',
+            textColor: const Color(0xFFFDE047),
+            onPressed: () => _openExcelFile(filePath),
+          ),
+          backgroundColor: AppColors.brandPrimary,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        backgroundColor: AppColors.brandPrimary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGeneratingTemplate = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating Excel template: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openExcelFile(String filePath) async {
+    try {
+      final result = await OpenFilex.open(
+        filePath,
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      if (result.type != ResultType.done) {
+        debugPrint('OpenFilex message: ${result.message} (${result.type})');
+      }
+    } catch (e) {
+      debugPrint('OpenFilex error: $e');
+    }
+  }
+
+  Future<void> _saveAsCleanly() async {
+    if (_lastGeneratedBytes == null) return;
+    try {
+      final fileName = _lastGeneratedFileName ??
+          '${_selectedClassName.replaceAll(' ', '_')}_template.xlsx';
+      final selectedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Excel Template',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+        bytes: _lastGeneratedBytes,
+      );
+
+      if (selectedPath != null) {
+        final file = File(selectedPath);
+        if (!await file.exists() || (await file.length()) == 0) {
+          await file.writeAsBytes(_lastGeneratedBytes!, flush: true);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('File saved to: $selectedPath'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Save error: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareFile() async {
+    if (_lastGeneratedBytes == null) return;
+    try {
+      final fileName = _lastGeneratedFileName ??
+          '${_selectedClassName.replaceAll(' ', '_')}_template.xlsx';
+      await Printing.sharePdf(
+        bytes: _lastGeneratedBytes!,
+        filename: fileName,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Share error: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   // ==========================================
@@ -119,6 +259,10 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
         final file = result.files.first;
         if (file.bytes != null) {
           _processUploadedBytes(file.bytes!, file.name);
+        } else if (file.path != null) {
+          final fileOnDisk = File(file.path!);
+          final bytes = await fileOnDisk.readAsBytes();
+          _processUploadedBytes(bytes, file.name);
         }
       }
     } catch (e) {
@@ -336,6 +480,9 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                   _currentStep = 0;
                   _parsedResult = null;
                   _uploadedFileName = null;
+                  _lastGeneratedBytes = null;
+                  _lastGeneratedFilePath = null;
+                  _lastGeneratedFileName = null;
                 });
               },
               child: const Text('Back to Wizard'),
@@ -386,6 +533,9 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                 _currentStep = 0;
                 _parsedResult = null;
                 _uploadedFileName = null;
+                _lastGeneratedBytes = null;
+                _lastGeneratedFilePath = null;
+                _lastGeneratedFileName = null;
               });
             },
           ),
@@ -735,13 +885,171 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                 ),
               ),
 
-              if (_lastGeneratedBytes != null) ...[
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => setState(() => _currentStep = 1),
-                    icon: const Icon(LucideIcons.arrowRight, size: 16),
-                    label: const Text('Proceed to Step 2: Upload Excel'),
+              if (_lastGeneratedBytes != null && _lastGeneratedFilePath != null) ...[
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.success.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.success,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(LucideIcons.check,
+                                color: Colors.white, size: 16),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Excel Spreadsheet Downloaded',
+                                  style: AppTypography.titleSmall.copyWith(
+                                    color: const Color(0xFF065F46),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  _lastGeneratedFileName ?? 'template.xlsx',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF047857),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(LucideIcons.folder,
+                                size: 14, color: AppColors.inkMuted),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _lastGeneratedFilePath!,
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 10,
+                                  color: AppColors.inkSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _openExcelFile(_lastGeneratedFilePath!),
+                              icon:
+                                  const Icon(LucideIcons.externalLink, size: 14),
+                              label: const Text('Re-open Excel'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF065F46),
+                                side: const BorderSide(
+                                    color: Color(0xFF059669)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _saveAsCleanly,
+                              icon: const Icon(LucideIcons.downloadCloud,
+                                  size: 14),
+                              label: const Text('Save As...'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.brandPrimary,
+                                side: const BorderSide(
+                                    color: AppColors.brandPrimary),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _shareFile,
+                            tooltip: 'Share Spreadsheet',
+                            icon: const Icon(LucideIcons.share2, size: 16),
+                            color: AppColors.inkPrimary,
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: const BorderSide(
+                                    color: AppColors.cardBorder),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TactileFeedback(
+                  onTap: () => setState(() => _currentStep = 1),
+                  child: Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardSurface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppColors.brandPrimary, width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Proceed to Step 2: Upload Excel',
+                          style: AppTypography.button.copyWith(
+                            color: AppColors.brandPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(LucideIcons.arrowRight,
+                            color: AppColors.brandPrimary, size: 16),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -843,6 +1151,76 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                   ],
                 ),
               ),
+
+              if (_lastGeneratedBytes != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.canvasBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(LucideIcons.fileSpreadsheet,
+                            color: AppColors.brandPrimary, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Test with Generated Template',
+                              style: AppTypography.titleSmall.copyWith(
+                                color: AppColors.inkPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              _lastGeneratedFileName ?? 'template.xlsx',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                color: AppColors.inkSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          _processUploadedBytes(
+                            _lastGeneratedBytes!,
+                            _lastGeneratedFileName ?? 'template.xlsx',
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brandPrimary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Load Sheet'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),

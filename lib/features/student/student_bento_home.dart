@@ -42,8 +42,12 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
 
   Future<void> _loadDashboardData() async {
     final currentStudent = ref.read(currentStudentProvider);
-    final studentId = currentStudent?.id ?? 'student-aarav';
-    final classId = currentStudent?.classSectionId ?? 'class-8b';
+    if (currentStudent == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final studentId = currentStudent.id;
+    final classId = currentStudent.classSectionId;
 
     final repo = ref.read(schoolRepositoryProvider);
 
@@ -72,7 +76,8 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
   Future<void> _toggleHomework(Homework hw) async {
     final newStatus = !hw.isCompleted;
     final currentStudent = ref.read(currentStudentProvider);
-    final studentId = currentStudent?.id ?? 'student-aarav';
+    final studentId = currentStudent?.id ?? '';
+    if (studentId.isEmpty) return;
 
     HapticFeedback.mediumImpact();
 
@@ -306,12 +311,9 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
   }
 
   Widget _buildTopBar(Student? student, bool hasOtaUpdate) {
-    final houseColor = AppColors.getHouseColor(student?.house);
-    final houseBg = AppColors.getHouseBgColor(student?.house);
-
     return Row(
       children: [
-        // Sibling Pill (Avatar with house color ring + Name)
+        // Sibling Pill (Avatar + Name)
         Expanded(
           child: TactileFeedback(
             onTap: () => SiblingSwitcherSheet.show(context),
@@ -324,24 +326,17 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: houseColor, width: 2),
-                    ),
-                    child: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: houseBg,
-                      child: Text(
-                        student?.fullName.isNotEmpty == true
-                            ? student!.fullName[0].toUpperCase()
-                            : 'A',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: houseColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  CircleAvatar(
+                    radius: 17,
+                    backgroundColor: AppColors.brandPrimaryLight,
+                    child: Text(
+                      student?.fullName.isNotEmpty == true
+                          ? student!.fullName[0].toUpperCase()
+                          : 'S',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: AppColors.brandPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -351,7 +346,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          student?.fullName ?? 'Aarav Sharma',
+                          student?.fullName ?? 'Student',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(

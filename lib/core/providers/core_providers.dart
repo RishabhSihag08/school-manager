@@ -1,11 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/app_config.dart';
 import '../models/models.dart';
 import '../repositories/mock_school_repository.dart';
 import '../repositories/school_repository.dart';
+import '../repositories/supabase_school_repository.dart';
 import '../services/ota_update_service.dart';
 
 /// Global repository provider for School operations
 final schoolRepositoryProvider = Provider<SchoolRepository>((ref) {
+  if (AppConfig.hasSupabaseCredentials) {
+    return SupabaseSchoolRepository();
+  }
   return MockSchoolRepository();
 });
 

@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:excel/excel.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/student.dart';
 import '../models/exam_result.dart';
 
@@ -230,6 +233,31 @@ class ExcelService {
 
     final encoded = excel.encode();
     return Uint8List.fromList(encoded ?? []);
+  }
+
+  /// Save generated Excel template bytes to disk
+  Future<File> saveExcelFile({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    Directory dir;
+    try {
+      dir = await getTemporaryDirectory();
+    } catch (_) {
+      dir = await getApplicationDocumentsDirectory();
+    }
+    final filePath = '${dir.path}/$fileName';
+    final file = File(filePath);
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  /// Open an Excel spreadsheet in native system viewer
+  Future<OpenResult> openExcelFile(String filePath) async {
+    return await OpenFilex.open(
+      filePath,
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
   }
 
   /// Step 2 & 3: Parse and validate uploaded Excel file bytes

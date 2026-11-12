@@ -25,10 +25,22 @@ abstract class SchoolRepository {
 
   Future<List<Student>> getSiblings(List<String> studentIds);
 
+  Future<Student?> getStudentById(String studentId);
+
+  Future<Student> updateStudent(Student student);
+
   // --- Class Sections & Roster ---
   Future<ClassSection?> getClassSectionById(String classSectionId);
 
   Future<List<ClassSection>> getAllClassSections();
+
+  Future<ClassSection> createClassSection({
+    required int grade,
+    required String section,
+    required String classCode,
+    String? classTeacherId,
+    String? classTeacherName,
+  });
 
   Future<List<Student>> getStudentsForClass(String classSectionId);
 
@@ -145,6 +157,8 @@ abstract class SchoolRepository {
     String? phone,
     String? homeroomClassId,
     String? homeroomClassName,
+    String? subjectName,
+    String? subjectCode,
   });
 
   Future<List<Map<String, dynamic>>> getTeacherSubjectAllocations(
