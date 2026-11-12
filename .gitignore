@@ -1,0 +1,81 @@
+# Flutter & Dart artifacts
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+/build/
+**/build/
+**/doc/api/
+/coverage/
+.widget_preview/
+
+# Android build & secrets
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/**/generated/
+/android/app/debug
+/android/app/profile
+/android/app/release
+*.keystore
+*.jks
+*.key
+key.properties
+google-services.json
+
+# iOS build & secrets
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+ios/profile
+ios/release
+ios/**/Pods/
+GoogleService-Info.plist
+**/ios/Flutter/.last_build_id
+
+# Environment & credentials
+.env
+.env.*
+!.env.example
+
+# IntelliJ IDEA & Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+
+# OS-generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+app.*.symbols
+app.*.map.json

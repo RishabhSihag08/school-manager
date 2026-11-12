@@ -1,0 +1,5 @@
+package com.vidyalaya.SchoolManager.school_manager
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

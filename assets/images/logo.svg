@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Shield Gradient -->
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#312E81" />
+    </linearGradient>
+
+    <!-- Inner Glow Gradient -->
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#818CF8" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#4338CA" stop-opacity="0.2" />
+    </linearGradient>
+
+    <!-- Gold Accent Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- White Soft Gradient -->
+    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#1E1B4B" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Outer Rounded Shield -->
+  <path d="M 256,44 
+           C 370,44 430,90 430,190 
+           C 430,320 330,410 256,464 
+           C 182,410 82,320 82,190 
+           C 82,90 142,44 256,44 Z" 
+        fill="url(#shieldGrad)" 
+        filter="url(#cardShadow)" />
+
+  <!-- Inner Subtle Shield Border Outline -->
+  <path d="M 256,66 
+           C 350,66 408,105 408,194 
+           C 408,304 318,386 256,436 
+           C 194,386 104,304 104,194 
+           C 104,105 162,66 256,66 Z" 
+        fill="none" 
+        stroke="url(#glowGrad)" 
+        stroke-width="5" 
+        stroke-linecap="round" />
+
+  <!-- Modern Graduation Cap (Mortarboard) -->
+  <!-- Cap Rhombus Top -->
+  <polygon points="256,120 376,170 256,220 136,170" 
+           fill="url(#whiteGrad)" />
+
+  <!-- Cap Skull Base -->
+  <path d="M 180,189 L 180,230 C 180,265 332,265 332,230 L 332,189 L 256,220 Z" 
+        fill="#CBD5E1" />
+
+  <!-- Cap Tassel & Golden Button -->
+  <circle cx="256" cy="170" r="10" fill="url(#goldGrad)" />
+  <path d="M 256,170 Q 370,185 375,245" 
+        fill="none" 
+        stroke="url(#goldGrad)" 
+        stroke-width="4.5" 
+        stroke-linecap="round" />
+  <rect x="371" y="245" width="8" height="20" rx="3" fill="url(#goldGrad)" />
+
+  <!-- Open Book of Knowledge -->
+  <!-- Left Page -->
+  <path d="M 252,295 
+           C 212,282 152,286 142,298 
+           C 138,302 138,368 138,374 
+           C 152,362 212,358 252,374 Z" 
+        fill="url(#whiteGrad)" />
+
+  <!-- Right Page -->
+  <path d="M 260,295 
+           C 300,282 360,286 370,298 
+           C 374,302 374,368 374,374 
+           C 360,362 300,358 260,374 Z" 
+        fill="#F8FAFC" />
+
+  <!-- Book Spine Center -->
+  <path d="M 256,293 L 256,380" 
+        stroke="#475569" 
+        stroke-width="4" 
+        stroke-linecap="round" />
+
+  <!-- Page Lines (Left) -->
+  <line x1="162" y1="316" x2="232" y2="308" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+  <line x1="162" y1="334" x2="232" y2="326" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+  <line x1="162" y1="352" x2="216" y2="345" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Page Lines (Right) -->
+  <line x1="280" y1="308" x2="350" y2="316" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+  <line x1="280" y1="326" x2="350" y2="334" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+  <line x1="280" y1="345" x2="334" y2="352" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Golden Excellence Star in Center Crest -->
+  <path d="M 256,396 
+           L 262,408 L 275,410 L 265,420 L 268,433 
+           L 256,427 L 244,433 L 247,420 L 237,410 
+           L 250,408 Z" 
+        fill="url(#goldGrad)" />
+</svg>
