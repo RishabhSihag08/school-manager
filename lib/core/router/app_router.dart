@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../features/auth/create_account_screen.dart';
 import '../../features/auth/join_class_code_screen.dart';
 import '../../features/auth/welcome_role_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -24,6 +25,7 @@ import '../widgets/bento_card.dart';
 /// School Manager Route Path Constants
 class AppRoutes {
   static const String onboarding = '/';
+  static const String createAccount = '/create-account';
   static const String welcome = '/welcome';
   static const String joinClass = '/join-class';
   static const String studentHome = '/student';
@@ -136,6 +138,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.onboarding,
         name: 'onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createAccount,
+        name: 'createAccount',
+        builder: (context, state) {
+          final role = state.uri.queryParameters['role'] ?? 'student';
+          return CreateAccountScreen(initialRole: role);
+        },
       ),
       GoRoute(
         path: AppRoutes.welcome,

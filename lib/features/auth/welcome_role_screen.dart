@@ -207,6 +207,48 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                 ],
               ),
 
+              const SizedBox(height: 16),
+
+              // Create Account Card
+              BentoCard(
+                padding: const EdgeInsets.all(18),
+                onTap: () => context.push(AppRoutes.createAccount),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandPrimaryLight,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        LucideIcons.userPlus,
+                        color: AppColors.brandPrimary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Don\'t have an account?',
+                            style: AppTypography.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Create new Student, Teacher or Staff profile',
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.inkMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(LucideIcons.chevronRight, color: AppColors.inkMuted),
+                  ],
+                ),
+              ),
+
               // Expandable Student Login Box
               if (_showStudentLoginDialog) ...[
                 const SizedBox(height: 16),
@@ -547,6 +589,21 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => context.push('${AppRoutes.createAccount}?role=student'),
+              icon: const Icon(LucideIcons.userPlus, size: 14, color: AppColors.brandPrimary),
+              label: Text(
+                'Don\'t have an account? Register as Student',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.brandPrimary,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -610,6 +667,21 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                 child: Text(
                   'Log In to Staff Portal',
                   style: AppTypography.labelLarge.copyWith(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => context.push('${AppRoutes.createAccount}?role=teacher'),
+              icon: const Icon(LucideIcons.userPlus, size: 14, color: Color(0xFF059669)),
+              label: Text(
+                'New Teacher/Staff? Create Account',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF059669),
                 ),
               ),
             ),

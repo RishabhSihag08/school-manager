@@ -137,6 +137,16 @@ abstract class SchoolRepository {
     required String pin,
   });
 
+  Future<Map<String, dynamic>> registerStaff({
+    required String fullName,
+    required String role,
+    required String loginCode,
+    required String pin,
+    String? phone,
+    String? homeroomClassId,
+    String? homeroomClassName,
+  });
+
   Future<List<Map<String, dynamic>>> getTeacherSubjectAllocations(
     String teacherId,
   );

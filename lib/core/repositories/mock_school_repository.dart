@@ -944,29 +944,77 @@ class MockSchoolRepository implements SchoolRepository {
     _announcements.insert(0, announcement);
   }
 
+  // Staff list for authentication
+  final List<Map<String, dynamic>> _staffList = [
+    {
+      'id': 'teacher-ramesh',
+      'role': 'teacher',
+      'login_code': 'ramesh',
+      'full_name': 'Mr. Ramesh Sharma',
+      'homeroom_class_id': 'class-8b',
+      'homeroom_class_name': 'Class 8-B',
+      'homeroom_class_code': '8B-K9X2',
+      'pin': '1234',
+    },
+    {
+      'id': 'teacher-sunita',
+      'role': 'teacher',
+      'login_code': 'sunita',
+      'full_name': 'Mrs. Sunita Rao',
+      'homeroom_class_id': 'class-6a',
+      'homeroom_class_name': 'Class 6-A',
+      'homeroom_class_code': '6A-M4P1',
+      'pin': '1234',
+    },
+    {
+      'id': 'admin-office',
+      'role': 'admin',
+      'login_code': 'admin',
+      'full_name': 'Office Administration',
+      'pin': '1234',
+    },
+  ];
+
   @override
   Future<Map<String, dynamic>?> loginStaff({
     required String loginCode,
     required String pin,
   }) async {
     final cleanCode = loginCode.trim().toLowerCase();
-    if (cleanCode == 'ramesh' && pin == '1234') {
-      return {
-        'id': 'teacher-ramesh',
-        'role': 'teacher',
-        'full_name': 'Mr. Ramesh Sharma',
-        'homeroom_class_id': 'class-8b',
-        'homeroom_class_name': 'Class 8-B',
-        'homeroom_class_code': '8B-K9X2',
-      };
-    } else if (cleanCode == 'admin' && pin == '1234') {
-      return {
-        'id': 'admin-office',
-        'role': 'admin',
-        'full_name': 'Office Administration',
-      };
+    for (final s in _staffList) {
+      final code = (s['login_code'] as String? ?? '').toLowerCase();
+      final userPin = s['pin'] as String? ?? '';
+      if (code == cleanCode && userPin == pin.trim()) {
+        return Map<String, dynamic>.from(s);
+      }
     }
     return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> registerStaff({
+    required String fullName,
+    required String role,
+    required String loginCode,
+    required String pin,
+    String? phone,
+    String? homeroomClassId,
+    String? homeroomClassName,
+  }) async {
+    final cleanCode = loginCode.trim().toLowerCase();
+    final newStaff = {
+      'id': 'staff-${DateTime.now().millisecondsSinceEpoch}',
+      'role': role,
+      'login_code': cleanCode,
+      'full_name': fullName.trim(),
+      'phone': phone?.trim() ?? '',
+      'homeroom_class_id': homeroomClassId ?? (role == 'teacher' ? 'class-8b' : null),
+      'homeroom_class_name': homeroomClassName ?? (role == 'teacher' ? 'Class 8-B' : null),
+      'homeroom_class_code': role == 'teacher' ? '8B-K9X2' : null,
+      'pin': pin.trim(),
+    };
+    _staffList.add(newStaff);
+    return Map<String, dynamic>.from(newStaff);
   }
 
   @override

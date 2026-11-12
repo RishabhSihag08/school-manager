@@ -192,6 +192,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               height: 1.45,
             ),
           ),
+          const SizedBox(height: 18),
+          TactileFeedback(
+            onTap: () => context.push(AppRoutes.createAccount),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.brandPrimary, Color(0xFF6366F1)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brandPrimary.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(LucideIcons.userPlus, size: 18, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    'New User? Create Account',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(LucideIcons.arrowRight, size: 16, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -286,6 +322,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(width: 6),
                       const Icon(LucideIcons.arrowRight, size: 16, color: Colors.white),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => context.push('${AppRoutes.createAccount}?role=student'),
+                icon: const Icon(LucideIcons.userPlus, size: 14, color: AppColors.brandPrimary),
+                label: Text(
+                  'Or Register New Student Account',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.brandPrimary,
                   ),
                 ),
               ),
@@ -389,6 +440,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => context.push('${AppRoutes.createAccount}?role=teacher'),
+                icon: const Icon(LucideIcons.userPlus, size: 14, color: Color(0xFF059669)),
+                label: Text(
+                  'Or Register New Teacher Account',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF059669),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -484,6 +550,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       const SizedBox(width: 6),
                       const Icon(LucideIcons.arrowRight, size: 16, color: Colors.white),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => context.push('${AppRoutes.createAccount}?role=admin'),
+                icon: const Icon(LucideIcons.userPlus, size: 14, color: Color(0xFF7C3AED)),
+                label: Text(
+                  'Or Register New Staff Account',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7C3AED),
                   ),
                 ),
               ),
