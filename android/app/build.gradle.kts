@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.vidyalaya.SchoolManager.school_manager"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
