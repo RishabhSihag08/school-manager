@@ -285,7 +285,7 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
   /// Check GitHub Releases for full APK releases
   Future<OtaReleaseInfo?> checkForUpdates({
     String currentVersion = AppConfig.currentVersion,
-    bool simulateMockIfNotFound = true,
+    bool simulateMockIfNotFound = false,
   }) async {
     state = state.copyWith(isChecking: true, errorMessage: null);
 

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../features/auth/join_class_code_screen.dart';
 import '../../features/auth/welcome_role_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/student/student_attendance_calendar_screen.dart';
 import '../../features/student/student_bento_home.dart';
@@ -16,15 +17,14 @@ import '../../features/teacher/mark_attendance_screen.dart';
 import '../../features/teacher/create_homework_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/excel_upload_wizard.dart';
-import '../providers/core_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
-import '../widgets/tactile_feedback.dart';
 
 /// School Manager Route Path Constants
 class AppRoutes {
-  static const String welcome = '/';
+  static const String onboarding = '/';
+  static const String welcome = '/welcome';
   static const String joinClass = '/join-class';
   static const String studentHome = '/student';
   static const String studentAttendance = '/student/attendance';
@@ -42,7 +42,7 @@ class AppRoutes {
   static const String settings = '/settings';
 }
 
-/// Fallback / Shell view shown for routes until feature teams register custom views
+/// Fallback / Shell view shown for routes until custom views are displayed
 class RoutePlaceholderView extends ConsumerWidget {
   final String title;
   final String routePath;
@@ -119,52 +119,9 @@ class RoutePlaceholderView extends ConsumerWidget {
                 padding: const EdgeInsets.all(16),
                 child: Text(description, style: AppTypography.bodyMedium),
               ),
-              const SizedBox(height: 24),
-              Text('Quick Role & Route Switcher', style: AppTypography.titleSmall),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _roleChip(context, ref, 'Student', 'student', AppRoutes.studentHome),
-                  _roleChip(context, ref, 'Teacher', 'teacher', AppRoutes.teacherDashboard),
-                  _roleChip(context, ref, 'Admin', 'admin', AppRoutes.adminDashboard),
-                  _roleChip(context, ref, 'Join Code', null, AppRoutes.joinClass),
-                  _roleChip(context, ref, 'Timetable', null, AppRoutes.studentTimetable),
-                  _roleChip(context, ref, 'Syllabus', null, AppRoutes.studentSyllabus),
-                  _roleChip(context, ref, 'Results', null, AppRoutes.studentResults),
-                  _roleChip(context, ref, 'Settings', null, AppRoutes.settings),
-                ],
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _roleChip(
-    BuildContext context,
-    WidgetRef ref,
-    String label,
-    String? role,
-    String targetPath,
-  ) {
-    return TactileFeedback(
-      onTap: () {
-        if (role != null) {
-          ref.read(activeRoleProvider.notifier).state = role;
-        }
-        context.go(targetPath);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Text(label, style: AppTypography.pillLabel),
       ),
     );
   }
@@ -173,8 +130,13 @@ class RoutePlaceholderView extends ConsumerWidget {
 /// Global GoRouter provider
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: AppRoutes.welcome,
+    initialLocation: AppRoutes.onboarding,
     routes: [
+      GoRoute(
+        path: AppRoutes.onboarding,
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
       GoRoute(
         path: AppRoutes.welcome,
         name: 'welcome',

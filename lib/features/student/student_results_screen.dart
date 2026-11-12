@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -149,16 +149,16 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
-                          AppConfig.schoolName,
+                          'STUDENT ACADEMIC PERFORMANCE REPORT',
                           style: pw.TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: pw.FontWeight.bold,
                             color: PdfColors.indigo900,
                           ),
                         ),
                         pw.SizedBox(height: 4),
                         pw.Text(
-                          'CBSE Affiliated Senior Secondary School • Affiliation No. 1930214',
+                          'Official Evaluation Record • Academic Session ${AppConfig.currentAcademicYear}',
                           style: const pw.TextStyle(
                             fontSize: 10,
                             color: PdfColors.grey700,

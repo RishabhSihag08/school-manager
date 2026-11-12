@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/class_section.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
@@ -167,19 +167,6 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
     }
   }
 
-  void _fillDemoAarav() {
-    _codeController.text = '8B-K9X2';
-    _nameController.text = 'Aarav Sharma';
-    _rollController.text = '1';
-    _admissionController.text = 'ADM2026101';
-    _parentNameController.text = 'Rajesh Sharma';
-    _parentPhoneController.text = '+91 98765 40001';
-    _pinController.text = '1234';
-    setState(() {
-      _selectedHouse = 'red';
-    });
-  }
-
   Future<void> _submitRegistration() async {
     if (_foundClass == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -263,16 +250,6 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => context.canPop() ? context.pop() : context.go(AppRoutes.welcome),
         ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(LucideIcons.sparkles, size: 16, color: AppColors.brandPrimary),
-            label: Text(
-              'Demo 8B-K9X2',
-              style: AppTypography.labelMedium.copyWith(color: AppColors.brandPrimary),
-            ),
-            onPressed: _fillDemoAarav,
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

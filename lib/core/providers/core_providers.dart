@@ -30,63 +30,14 @@ final shorebirdStatusProvider = Provider<Map<String, dynamic>>((ref) {
   };
 });
 
-/// Currently active student session (Defaults to demo student Aarav Sharma)
-final currentStudentProvider = StateProvider<Student?>((ref) {
-  return const Student(
-    id: 'student-aarav',
-    rollNo: 1,
-    fullName: 'Aarav Sharma',
-    admissionNo: 'ADM2026101',
-    classSectionId: 'class-8b',
-    parentName: 'Rajesh Sharma',
-    parentPhone: '+919876540001',
-    house: 'red',
-    pinHash: '1234',
-    homeworkStreak: 5,
-  );
-});
+/// Currently active student session (Production: null until authenticated)
+final currentStudentProvider = StateProvider<Student?>((ref) => null);
 
 /// Linked siblings for parent switcher
-final linkedSiblingsProvider = StateProvider<List<Student>>((ref) {
-  return [
-    const Student(
-      id: 'student-aarav',
-      rollNo: 1,
-      fullName: 'Aarav Sharma',
-      admissionNo: 'ADM2026101',
-      classSectionId: 'class-8b',
-      parentName: 'Rajesh Sharma',
-      parentPhone: '+919876540001',
-      house: 'red',
-      pinHash: '1234',
-      homeworkStreak: 5,
-    ),
-    const Student(
-      id: 'student-kabir',
-      rollNo: 2,
-      fullName: 'Kabir Verma',
-      admissionNo: 'ADM2026102',
-      classSectionId: 'class-8b',
-      parentName: 'Sanjay Verma',
-      parentPhone: '+919876540002',
-      house: 'blue',
-      pinHash: '1234',
-      homeworkStreak: 3,
-    ),
-  ];
-});
+final linkedSiblingsProvider = StateProvider<List<Student>>((ref) => const <Student>[]);
 
-/// Currently active staff session (Teacher or Admin)
-final currentStaffProvider = StateProvider<Map<String, dynamic>?>((ref) {
-  return {
-    'id': 'teacher-ramesh',
-    'role': 'teacher',
-    'full_name': 'Mr. Ramesh Sharma',
-    'homeroom_class_id': 'class-8b',
-    'homeroom_class_name': 'Class 8-B',
-    'homeroom_class_code': '8B-K9X2',
-  };
-});
+/// Currently active staff session (Production: null until authenticated)
+final currentStaffProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
 /// Active app role switcher: 'student', 'teacher', 'admin'
 final activeRoleProvider = StateProvider<String>((ref) => 'student');

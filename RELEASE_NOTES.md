@@ -1,3 +1,38 @@
+# School Manager v1.0.1 — Production Release & Modern Onboarding
+
+**Release Date**: November 12, 2026  
+**Version**: `v1.0.1` (Build `2`)
+
+### 🌟 What's New in v1.0.1:
+
+#### 1. 🚀 Modern Role-Selection Onboarding Screen
+- Replaced the direct opening screen with a dedicated, elevated Onboarding experience.
+- Interactive Bento role cards for **Student / Parent**, **Teacher**, and **Staff & Administration** with clear feature highlights and one-tap routing.
+- First-time onboarding state and role preference persistence via `SharedPreferences`.
+
+#### 2. 🎨 Complete Icon System Fix
+- Diagnosed and fixed the critical icon rendering glitch that caused Chinese characters and missing tofu crossed-box glyphs.
+- Upgraded icon engine to `lucide_icons_flutter` with verified font packaging (`fontFamily: 'Lucide'`, `fontPackage: 'lucide_icons_flutter'`).
+- Introduced centralized `AppIcons` design system registry. 100% vector fidelity across all 75 icon types.
+
+#### 3. 🔐 Supabase Environment Configuration (`.env`)
+- Added `.env` and `.env.example` configurations for `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+- Integrated `flutter_dotenv` into `AppConfig` and wired `Supabase.initialize()` on startup.
+
+#### 4. 🏫 Complete Removal of Hardcoded School Names
+- Cleaned out all specific school names ("Delhi Public Heritage School" and "Delhi Public Academy") across all UI screens, configurations, repository mock data, and PDF generators.
+- Dynamic branding now defaults cleanly to "School Manager - Digital Campus Portal".
+
+#### 5. 🛡️ Production Hardening & Test Feature Removal
+- Stripped all test demo bypass buttons ("Student Aarav", "Teacher Ramesh", "Admin Principal").
+- Removed demo autofill button in student class code join flow.
+- Removed mock 1-click test buttons and injected test errors from the Excel wizard.
+- Removed test OTA update modal trigger from `AdminShell`.
+- Disabled simulated mock fallback in `OtaUpdateService` so real production releases are fetched from GitHub.
+- Reset default session states to `null` for real authentication.
+
+---
+
 # School Manager v1.0.0 — Official Release
 
 **School Manager** is a modern, high-craft, production-grade school management platform tailored for Indian schools (Grades 1 to 12). Built with Flutter, Supabase, and Riverpod, it replaces legacy spreadsheet-style school portals with warm tactile Bento grids, instant Class Code onboarding, a 30-second attendance engine, and an automated CBSE report card generator.

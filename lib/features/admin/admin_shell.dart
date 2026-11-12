@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
-import '../../core/services/ota_update_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
-import '../../core/widgets/ota_update_dialog.dart';
 import '../../core/widgets/school_manager_logo.dart';
 import '../../core/widgets/tactile_feedback.dart';
 import 'excel_upload_wizard.dart';
@@ -30,7 +28,7 @@ class AdminShell extends ConsumerStatefulWidget {
 }
 
 class _AdminShellState extends ConsumerState<AdminShell> {
-  int _selectedNavIndex = 2; // Default to Excel Wizard for immediate demo utility
+  int _selectedNavIndex = 0;
   bool _isLoading = false;
 
   final List<ClassSection> _classes = [];
@@ -279,8 +277,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   Widget _buildRoleSwitchChip() {
     return TactileFeedback(
       onTap: () {
-        ref.read(activeRoleProvider.notifier).state = 'teacher';
-        context.go(AppRoutes.teacherDashboard);
+        ref.read(currentStaffProvider.notifier).state = null;
+        context.go(AppRoutes.onboarding);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -292,10 +290,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         ),
         child: Row(
           children: [
-            const Icon(LucideIcons.userCheck,
-                size: 14, color: AppColors.brandPrimary),
+            const Icon(LucideIcons.logOut,
+                size: 14, color: AppColors.inkSecondary),
             const SizedBox(width: 4),
-            Text('Teacher', style: AppTypography.pillLabel),
+            Text('Switch Role', style: AppTypography.pillLabel),
           ],
         ),
       ),
@@ -898,30 +896,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
               Row(
                 children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      OtaUpdateDialog.show(
-                        context,
-                        release: OtaReleaseInfo(
-                          version: '1.0.1',
-                          title: 'School Manager v1.0.1 Update',
-                          changelog:
-                              '• Excel Marks Validation DataGrid\n• CBSE Report Card PDF Generator\n• 30-Second Roll Call for Class Teachers',
-                          apkDownloadUrl: 'https://example.com/update.apk',
-                          apkSizeBytes: 18 * 1024 * 1024,
-                          isForced: false,
-                          publishedAt: DateTime.now(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(LucideIcons.refreshCw, size: 16),
-                    label: const Text('Test OTA Update Modal'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brandPrimary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: () => context.push(AppRoutes.settings),
                     icon: const Icon(LucideIcons.settings, size: 16),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/config/app_config.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
@@ -114,14 +114,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppConfig.schoolName,
+                      AppConfig.appName,
                       style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'CBSE Affiliation No. 1930214 • School Code: 08241',
+                      'Unified Digital Campus System',
                       style: GoogleFonts.inter(
                         color: AppColors.inkSecondary,
                         fontSize: 12,

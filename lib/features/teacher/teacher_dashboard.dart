@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/config/app_config.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
@@ -379,20 +380,20 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('School Manager Teacher', style: AppTypography.headlineSmall),
+            Text('Faculty Portal', style: AppTypography.headlineSmall),
             Text(
-              'Delhi Public Academy • Session 2026-27',
+              'Session ${AppConfig.currentAcademicYear}',
               style:
                   AppTypography.caption.copyWith(color: AppColors.inkMuted),
             ),
           ],
         ),
         actions: [
-          // Quick Role Switcher Button
+          // Switch Role / Session Action
           TactileFeedback(
             onTap: () {
-              ref.read(activeRoleProvider.notifier).state = 'admin';
-              context.go(AppRoutes.adminDashboard);
+              ref.read(currentStaffProvider.notifier).state = null;
+              context.go(AppRoutes.onboarding);
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
@@ -404,10 +405,10 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               ),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.shieldAlert,
-                      size: 14, color: AppColors.brandPrimary),
+                  const Icon(LucideIcons.logOut,
+                      size: 14, color: AppColors.inkSecondary),
                   const SizedBox(width: 4),
-                  Text('Admin Shell', style: AppTypography.pillLabel),
+                  Text('Switch Role', style: AppTypography.pillLabel),
                 ],
               ),
             ),

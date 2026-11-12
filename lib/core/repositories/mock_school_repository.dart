@@ -534,7 +534,7 @@ class MockSchoolRepository implements SchoolRepository {
       id: 'ann-1',
       title: '🏖️ Tomorrow is a Holiday on account of Guru Nanak Jayanti',
       body:
-          'Delhi Public Heritage School will remain closed on Tuesday for Guru Nanak Jayanti. Classes and lab sessions will resume as per regular timetable on Wednesday.',
+          'The school will remain closed on Tuesday for Guru Nanak Jayanti. Classes and lab sessions will resume as per regular timetable on Wednesday.',
       category: AnnouncementCategory.holiday,
       isPinned: true,
       eventOrHolidayDate: DateTime.now().add(const Duration(days: 1)),

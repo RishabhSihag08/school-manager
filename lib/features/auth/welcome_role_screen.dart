@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -22,12 +22,12 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
   bool _showStudentLoginDialog = false;
   bool _showStaffLoginDialog = false;
 
-  final _studentRollController = TextEditingController(text: '1');
-  final _studentPinController = TextEditingController(text: '1234');
+  final _studentRollController = TextEditingController();
+  final _studentPinController = TextEditingController();
   String _studentSelectedClass = 'class-8b';
 
-  final _staffCodeController = TextEditingController(text: 'T-RAMESH');
-  final _staffPinController = TextEditingController(text: '1234');
+  final _staffCodeController = TextEditingController();
+  final _staffPinController = TextEditingController();
 
   @override
   void dispose() {
@@ -36,17 +36,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
     _staffCodeController.dispose();
     _staffPinController.dispose();
     super.dispose();
-  }
-
-  void _handleQuickRoleSwitch(String role) {
-    ref.read(activeRoleProvider.notifier).state = role;
-    if (role == 'student') {
-      context.go(AppRoutes.studentHome);
-    } else if (role == 'teacher') {
-      context.go(AppRoutes.teacherDashboard);
-    } else if (role == 'admin') {
-      context.go(AppRoutes.adminDashboard);
-    }
   }
 
   Future<void> _submitStudentLogin() async {
@@ -78,7 +67,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.danger,
-          content: Text('Student not found. Use Demo Roll: 1, PIN: 1234'),
+          content: Text('Student not found. Please verify your Class, Roll Number, and PIN.'),
         ),
       );
     }
@@ -113,7 +102,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: AppColors.danger,
-          content: Text('Staff credentials invalid. Use T-RAMESH or ADMIN-01 with PIN: 1234'),
+          content: Text('Staff credentials invalid. Please check your Staff Code and PIN.'),
         ),
       );
     }
@@ -126,6 +115,11 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
     return Scaffold(
       backgroundColor: AppColors.canvasBackground,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft),
+          tooltip: 'Back to Onboarding',
+          onPressed: () => context.go(AppRoutes.onboarding),
+        ),
         title: Row(
           children: [
             const SchoolManagerLogo(size: 28),
@@ -225,12 +219,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                 _buildStaffLoginCard(),
               ],
 
-              const SizedBox(height: 32),
-
-              // Quick Role Switcher (For Evaluation & Demo Seamlessness)
-              _buildQuickDemoBar(),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -264,8 +253,8 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                         ),
                       ),
                       Text(
-                        'Delhi Public Academy',
-                        style: AppTypography.bodySmall,
+                        'Digital Campus Portal',
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.inkMuted),
                       ),
                     ],
                   ),
@@ -626,84 +615,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickDemoBar() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(LucideIcons.sparkles, size: 14, color: AppColors.inkMuted),
-            const SizedBox(width: 6),
-            Text('Quick Role Switcher', style: AppTypography.labelSmall),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _roleSwitchPill(
-                label: 'Student Aarav',
-                role: 'student',
-                icon: LucideIcons.user,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _roleSwitchPill(
-                label: 'Teacher Ramesh',
-                role: 'teacher',
-                icon: LucideIcons.userCheck,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _roleSwitchPill(
-                label: 'Admin Principal',
-                role: 'admin',
-                icon: LucideIcons.shieldAlert,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _roleSwitchPill({
-    required String label,
-    required String role,
-    required IconData icon,
-  }) {
-    return TactileFeedback(
-      onTap: () => _handleQuickRoleSwitch(role),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 18, color: AppColors.inkSecondary),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkPrimary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

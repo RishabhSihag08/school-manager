@@ -14,9 +14,9 @@ class ReportCardPdfService {
     required List<ExamResult> results,
     String? classTeacherRemarks,
     double attendancePercentage = 94.2,
-    String schoolName = 'SCHOOL MANAGER CENTRAL ACADEMY',
-    String schoolAffiliation = 'CBSE Affiliation No: 2130048 • School Code: 08412',
-    String schoolAddress = 'Institutional Area, Sector 14, New Delhi - 110001',
+    String schoolName = 'ANNUAL ACADEMIC PROGRESS REPORT',
+    String schoolAffiliation = 'School Examination & Evaluation Record',
+    String schoolAddress = 'Official Academic Record',
     String academicSession = 'Academic Session: 2026-2027',
   }) async {
     final pdf = pw.Document();
