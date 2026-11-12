@@ -42,5 +42,8 @@ final currentStaffProvider = StateProvider<Map<String, dynamic>?>((ref) => null)
 /// Active app role switcher: 'student', 'teacher', 'admin'
 final activeRoleProvider = StateProvider<String>((ref) => 'student');
 
+/// Initial navigation route (determined on app startup from persisted session)
+final initialRouteProvider = StateProvider<String>((ref) => '/');
+
 /// Accessibility toggle for reduced motion
 final reduceMotionProvider = StateProvider<bool>((ref) => false);

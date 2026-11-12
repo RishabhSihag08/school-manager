@@ -20,14 +20,18 @@ class AppConfig {
       supabaseAnonKey.isNotEmpty &&
       !supabaseUrl.contains('your-project-id');
 
+  // Master Administrative Security Key (Case-Sensitive)
+  static String get masterKey =>
+      dotenv.isInitialized ? (dotenv.env['MASTER_KEY'] ?? 'SirChotuRam') : 'SirChotuRam';
+
   // Dual-OTA Engine Configuration
   static const String otaEngineType = 'Dual-Layer (Shorebird + GitHub Releases)';
   static const String shorebirdAppId = 'school-manager-app';
   static const String githubOwner = 'RishabhSihag08';
   static const String githubRepo = 'school-manager';
   static const String otaChannel = 'github-releases';
-  static const String currentVersion = '1.0.1';
-  static const int currentBuildNumber = 2;
+  static const String currentVersion = '1.0.3';
+  static const int currentBuildNumber = 3;
 
   static String get githubLatestReleaseApi =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';

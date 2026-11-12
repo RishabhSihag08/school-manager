@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/class_section.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_typography.dart';
@@ -219,6 +220,9 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
       }
 
       ref.read(activeRoleProvider.notifier).state = 'student';
+
+      // Persist session across app restarts
+      await SessionService.saveStudentSession(newStudent);
 
       if (!mounted) return;
 

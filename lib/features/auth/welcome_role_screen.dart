@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
@@ -62,6 +63,8 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
     if (student != null) {
       ref.read(currentStudentProvider.notifier).state = student;
       ref.read(activeRoleProvider.notifier).state = 'student';
+      await SessionService.saveStudentSession(student);
+      if (!mounted) return;
       context.go(AppRoutes.studentHome);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,6 +96,8 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       ref.read(currentStaffProvider.notifier).state = staff;
       final role = staff['role'] as String? ?? 'teacher';
       ref.read(activeRoleProvider.notifier).state = role;
+      await SessionService.saveStaffSession(staff);
+      if (!mounted) return;
       if (role == 'admin') {
         context.go(AppRoutes.adminDashboard);
       } else {
@@ -115,11 +120,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
     return Scaffold(
       backgroundColor: AppColors.canvasBackground,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft),
-          tooltip: 'Back to Onboarding',
-          onPressed: () => context.go(AppRoutes.onboarding),
-        ),
         title: Row(
           children: [
             const SchoolManagerLogo(size: 28),

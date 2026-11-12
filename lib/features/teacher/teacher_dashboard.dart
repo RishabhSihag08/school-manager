@@ -8,6 +8,7 @@ import '../../core/config/app_config.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
@@ -391,9 +392,11 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         actions: [
           // Switch Role / Session Action
           TactileFeedback(
-            onTap: () {
+            onTap: () async {
+              final router = GoRouter.of(context);
+              await SessionService.clearSession();
               ref.read(currentStaffProvider.notifier).state = null;
-              context.go(AppRoutes.onboarding);
+              router.go(AppRoutes.onboarding);
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/config/app_config.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
@@ -42,6 +44,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
   // Staff specific
   final _loginCodeController = TextEditingController();
+  final _masterKeyController = TextEditingController();
   String _selectedHomeroom = 'class-8b';
   bool _isLoading = false;
 
@@ -61,6 +64,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
     _admissionController.dispose();
     _parentNameController.dispose();
     _loginCodeController.dispose();
+    _masterKeyController.dispose();
     super.dispose();
   }
 
@@ -108,6 +112,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         ref.read(currentStudentProvider.notifier).state = student;
         ref.read(activeRoleProvider.notifier).state = 'student';
 
+        // Persist session across app restarts
+        await SessionService.saveStudentSession(student);
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('preferred_role', 'student');
         await prefs.setString('student_id', student.id);
@@ -122,7 +129,14 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
           context.go(AppRoutes.studentHome);
         }
       } else {
-        // Teacher or Admin
+        // Teacher or Admin - Requires Master Security Key from .env
+        final masterKeyInput = _masterKeyController.text.trim();
+        if (masterKeyInput != AppConfig.masterKey) {
+          _showError('Invalid Master Security Key. Administrative authorization required.');
+          setState(() => _isLoading = false);
+          return;
+        }
+
         final loginCode = _loginCodeController.text.trim();
         if (loginCode.isEmpty) {
           _showError('Please enter a login code / user ID');
@@ -149,6 +163,9 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
 
         ref.read(currentStaffProvider.notifier).state = staff;
         ref.read(activeRoleProvider.notifier).state = _selectedRole;
+
+        // Persist session across app restarts
+        await SessionService.saveStaffSession(staff);
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('preferred_role', _selectedRole);
@@ -547,6 +564,16 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
         ),
         const SizedBox(height: 14),
       ],
+
+      _fieldLabel('Master Administrative Security Key *'),
+      const SizedBox(height: 6),
+      _inputContainer(
+        controller: _masterKeyController,
+        hint: 'Case-sensitive master key from .env',
+        icon: LucideIcons.keyRound,
+        isPassword: true,
+      ),
+      const SizedBox(height: 14),
 
       _fieldLabel('Create 4-Digit Secret PIN *'),
       const SizedBox(height: 6),

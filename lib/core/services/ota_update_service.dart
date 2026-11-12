@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import '../config/app_config.dart';
@@ -343,7 +344,7 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
   /// Download the APK with live stream progress and launch native installer
   Future<bool> downloadAndInstallUpdate({
     required OtaReleaseInfo release,
-    void Function(double progress)? onProgress,
+    void Function(double progress, int received, int total)? onProgress,
   }) async {
     if (kIsWeb) {
       debugPrint('OTA installation is only supported on Android/iOS.');
@@ -359,6 +360,24 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
     try {
       final tempDir = await getTemporaryDirectory();
       final apkFile = File('${tempDir.path}/school-manager-v${release.version}.apk');
+
+      // Check if file is already completely downloaded
+      if (await apkFile.exists()) {
+        final existingSize = await apkFile.length();
+        if (release.apkSizeBytes > 0 && (existingSize >= release.apkSizeBytes - 1024)) {
+          debugPrint('OTA: APK already cached at ${apkFile.path} ($existingSize bytes). Launching installer.');
+          state = state.copyWith(
+            isDownloading: false,
+            downloadProgress: 1.0,
+            bytesDownloaded: existingSize,
+            totalBytes: existingSize,
+            localApkPath: apkFile.path,
+          );
+          onProgress?.call(1.0, existingSize, existingSize);
+          await installApk(apkFile.path);
+          return true;
+        }
+      }
 
       if (release.apkDownloadUrl.startsWith('http')) {
         final request = http.Request('GET', Uri.parse(release.apkDownloadUrl));
@@ -378,7 +397,7 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
               bytesDownloaded: received,
               totalBytes: total,
             );
-            onProgress?.call(progress);
+            onProgress?.call(progress, received, total);
           },
         ).asFuture();
 
@@ -388,12 +407,13 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
         for (int p = 1; p <= 10; p++) {
           await Future.delayed(const Duration(milliseconds: 150));
           final progress = p / 10.0;
+          final received = (progress * release.apkSizeBytes).toInt();
           state = state.copyWith(
             downloadProgress: progress,
-            bytesDownloaded: (progress * release.apkSizeBytes).toInt(),
+            bytesDownloaded: received,
             totalBytes: release.apkSizeBytes,
           );
-          onProgress?.call(progress);
+          onProgress?.call(progress, received, release.apkSizeBytes);
         }
         await apkFile.writeAsString('DEMO_APK_CONTENT');
       }
@@ -404,10 +424,9 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
         localApkPath: apkFile.path,
       );
 
-      // Launch native Android APK installer via OpenFilex
+      // Launch native Android APK installer via OpenFilex with explicit MIME type
       if (Platform.isAndroid && await apkFile.exists()) {
-        final openResult = await OpenFilex.open(apkFile.path);
-        debugPrint('OpenFilex launch installer result: ${openResult.type}');
+        await installApk(apkFile.path);
       }
 
       return true;
@@ -417,6 +436,33 @@ class OtaUpdateService extends StateNotifier<OtaUpdateState> {
         errorMessage: 'Download failed: $e',
       );
       return false;
+    }
+  }
+
+  /// Launch the Android native package installer for the downloaded APK
+  static Future<OpenResult> installApk(String apkPath) async {
+    try {
+      final result = await OpenFilex.open(
+        apkPath,
+        type: 'application/vnd.android.package-archive',
+      );
+      debugPrint('OpenFilex launch installer result: ${result.type} - ${result.message}');
+      return result;
+    } catch (e) {
+      debugPrint('OpenFilex error: $e');
+      return OpenResult(type: ResultType.error, message: e.toString());
+    }
+  }
+
+  /// Browser fallback for direct external package download & install
+  static Future<void> launchBrowserDownload(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Failed to open browser download: $e');
     }
   }
 

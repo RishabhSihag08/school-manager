@@ -7,6 +7,7 @@ import '../../core/config/app_config.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/services/ota_update_service.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
@@ -227,8 +228,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           TactileFeedback(
-            onTap: () {
-              context.go(AppRoutes.welcome);
+            onTap: () async {
+              final router = GoRouter.of(context);
+              await SessionService.clearSession();
+              ref.read(currentStudentProvider.notifier).state = null;
+              ref.read(currentStaffProvider.notifier).state = null;
+              router.go(AppRoutes.onboarding);
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

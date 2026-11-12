@@ -6,7 +6,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../features/auth/create_account_screen.dart';
 import '../../features/auth/join_class_code_screen.dart';
 import '../../features/auth/welcome_role_screen.dart';
-import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/student/student_attendance_calendar_screen.dart';
 import '../../features/student/student_bento_home.dart';
@@ -18,6 +17,7 @@ import '../../features/teacher/mark_attendance_screen.dart';
 import '../../features/teacher/create_homework_screen.dart';
 import '../../features/admin/admin_shell.dart';
 import '../../features/admin/excel_upload_wizard.dart';
+import '../providers/core_providers.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/bento_card.dart';
@@ -131,13 +131,14 @@ class RoutePlaceholderView extends ConsumerWidget {
 
 /// Global GoRouter provider
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final initialRoute = ref.watch(initialRouteProvider);
   return GoRouter(
-    initialLocation: AppRoutes.onboarding,
+    initialLocation: initialRoute,
     routes: [
       GoRoute(
         path: AppRoutes.onboarding,
         name: 'onboarding',
-        builder: (context, state) => const OnboardingScreen(),
+        builder: (context, state) => const WelcomeRoleScreen(),
       ),
       GoRoute(
         path: AppRoutes.createAccount,
