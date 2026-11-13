@@ -39,7 +39,7 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
   String _selectedExamName = 'Half Yearly Examination';
   bool _isCustomExam = false;
   final TextEditingController _customExamNameCtrl = TextEditingController();
-  final TextEditingController _maxMarksCtrl = TextEditingController(text: '100');
+  final TextEditingController _maxMarksCtrl = TextEditingController();
   DateTime _declarationDate = DateTime.now();
   final Set<String> _selectedSubjectCodes = {'MATH', 'SCI', 'ENG', 'SST', 'HIN'};
 
@@ -895,29 +895,26 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
               const SizedBox(height: 16),
 
               // Maximum Marks of the Examination
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Maximum Marks of Examination', style: AppTypography.titleSmall),
-                  Wrap(
-                    spacing: 6,
-                    children: [20, 25, 40, 50, 80, 100].map((m) {
-                      final isSelected = _maxMarksCtrl.text == m.toString();
-                      return ChoiceChip(
-                        label: Text('$m'),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              _maxMarksCtrl.text = '$m';
-                              _maxMarks = m.toDouble();
-                            });
-                          }
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
+              Text('Maximum Marks of Examination', style: AppTypography.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [20, 25, 40, 50, 80, 100].map((m) {
+                  final isSelected = _maxMarksCtrl.text == m.toString();
+                  return ChoiceChip(
+                    label: Text('$m'),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _maxMarksCtrl.text = '$m';
+                          _maxMarks = m.toDouble();
+                        });
+                      }
+                    },
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 8),
               TextFormField(

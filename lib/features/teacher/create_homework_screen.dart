@@ -225,7 +225,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
   }
 
   void _showVideoAttachmentDialog() {
-    final titleCtrl = TextEditingController(text: 'Concept Video Lesson');
+    final titleCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
 
     showDialog(
@@ -269,7 +269,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                 if (result != null && result.files.isNotEmpty) {
                   final file = result.files.first;
                   urlCtrl.text = file.path ?? '';
-                  if (titleCtrl.text == 'Concept Video Lesson') {
+                  if (titleCtrl.text.isEmpty) {
                     titleCtrl.text = file.name;
                   }
                 }
@@ -624,142 +624,63 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
 
             const SizedBox(height: 16),
 
-            // Blackboard Instructions Section
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B), // Deep Chalkboard Slate
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(18),
+            // Homework Description Section
+            BentoCard(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(LucideIcons.presentation,
-                                size: 16, color: Color(0xFFFDE68A)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Blackboard Instructions *',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(6),
+                          color: AppColors.brandPrimaryLight,
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          'CHALKBOARD VIEW',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF94A3B8),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                        child: const Icon(LucideIcons.fileText,
+                            size: 16, color: AppColors.brandPrimary),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Homework Description *',
+                        style: AppTypography.titleSmall,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'Write blackboard instructions, problem numbers, or notes for students to copy.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 11.5,
-                      color: const Color(0xFF94A3B8),
-                    ),
+                    'Enter instructions, problems, or notes for students to complete.',
+                    style: AppTypography.caption,
                   ),
-                  const SizedBox(height: 10),
-
-                  // Quick Insert Pills
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _chalkPill('+ Question Numbers', () {
-                        final cur = _descriptionController.text;
-                        _descriptionController.text = cur.isEmpty
-                            ? '• Complete Questions: Q1, Q2, Q4, Q7 from Exercise '
-                            : '$cur\n• Complete Questions: Q1, Q2, Q4, Q7 from Exercise ';
-                      }),
-                      _chalkPill('+ Notebook Check', () {
-                        final cur = _descriptionController.text;
-                        _descriptionController.text = cur.isEmpty
-                            ? '• Write neatly in school fair notebook with step-by-step steps.'
-                            : '$cur\n• Write neatly in school fair notebook with step-by-step steps.';
-                      }),
-                      _chalkPill('+ Diagram & Formulas', () {
-                        final cur = _descriptionController.text;
-                        _descriptionController.text = cur.isEmpty
-                            ? '• Draw labeled diagram with pencil and state all relevant formulas.'
-                            : '$cur\n• Draw labeled diagram with pencil and state all relevant formulas.';
-                      }),
-                    ],
-                  ),
-
                   const SizedBox(height: 12),
-
-                  // Chalkboard Text Area
                   TextFormField(
                     controller: _descriptionController,
                     maxLines: 5,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 13.5,
-                      color: const Color(0xFFF8FAFC), // Chalk White
-                      height: 1.5,
-                    ),
+                    style: AppTypography.bodyMedium,
                     validator: (val) =>
                         (val == null || val.trim().isEmpty)
-                            ? 'Please provide blackboard instructions for students'
+                            ? 'Please provide homework instructions for students'
                             : null,
                     decoration: InputDecoration(
                       hintText:
-                          'Write blackboard assignment here:\n• Exercise 4.2 Q1 to Q8\n• Show all working clearly in notebook\n• Due next class period...',
-                      hintStyle: GoogleFonts.jetBrainsMono(
-                        fontSize: 12.5,
-                        color: const Color(0xFF64748B),
+                          'Enter assignment details here...\n• Exercises or problems to solve\n• Specific notebook or submission instructions',
+                      hintStyle: AppTypography.bodySmall.copyWith(
+                        color: AppColors.inkSecondary.withValues(alpha: 0.6),
                       ),
                       filled: true,
-                      fillColor: Colors.black.withValues(alpha: 0.25),
+                      fillColor: AppColors.canvasBackground,
                       contentPadding: const EdgeInsets.all(14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.15),
+                        borderSide: const BorderSide(
+                          color: AppColors.cardBorder,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.15),
+                        borderSide: const BorderSide(
+                          color: AppColors.cardBorder,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -1012,30 +933,6 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                       ),
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _chalkPill(String label, VoidCallback onTap) {
-    return TactileFeedback(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFFFDE68A),
           ),
         ),
       ),

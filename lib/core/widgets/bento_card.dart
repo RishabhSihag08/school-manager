@@ -30,7 +30,7 @@ class BentoCard extends StatelessWidget {
   const BentoCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16.0),
+    this.padding = const EdgeInsets.all(13.0),
     this.margin,
     this.backgroundColor = AppColors.surfaceCard,
     this.borderColor = AppColors.cardBorder,

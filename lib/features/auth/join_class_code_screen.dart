@@ -151,11 +151,6 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
     }
   }
 
-  void _applyDemoCode() {
-    _codeController.text = '8B-K9X2';
-    _codeController.selection = const TextSelection.collapsed(offset: 7);
-  }
-
   Future<void> _submitRegistration() async {
     if (_foundClass == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -249,7 +244,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -489,38 +484,6 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
                               style: AppTypography.pillLabel.copyWith(
                                 color: AppColors.brandPrimary,
                                 fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Quick Demo Code Fill Pill
-                    TactileFeedback(
-                      onTap: _applyDemoCode,
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondarySurface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppColors.cardBorder),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(LucideIcons.sparkles, size: 14, color: AppColors.inkSecondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Demo (8B-K9X2)',
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.inkSecondary,
                               ),
                             ),
                           ],

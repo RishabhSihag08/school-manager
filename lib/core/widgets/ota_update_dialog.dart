@@ -302,25 +302,8 @@ class _OtaUpdateDialogState extends ConsumerState<OtaUpdateDialog> with WidgetsB
               ),
               const SizedBox(height: 10),
 
-              // Changelog container
-              Container(
-                constraints: const BoxConstraints(maxHeight: 160),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.secondarySurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    widget.release.changelog.isNotEmpty
-                        ? widget.release.changelog
-                        : 'General improvements, persistent login, and performance enhancements for School Manager.',
-                    style: AppTypography.bodyMedium.copyWith(fontSize: 13),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
+              // Changelog container removed per user requirement (do not show release notes on update screen)
+              const SizedBox(height: 8),
 
               // Download progress bar
               if (_isDownloading) ...[

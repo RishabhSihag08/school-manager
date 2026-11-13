@@ -1820,11 +1820,13 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
                             children: [
                               Text(student.fullName,
                                   style: AppTypography.titleMedium),
-                              const SizedBox(width: 8),
                               // Roll No Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -1845,8 +1847,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                 ),
                               ),
                               if (student.admissionNo != null &&
-                                  student.admissionNo!.isNotEmpty) ...[
-                                const SizedBox(width: 6),
+                                  student.admissionNo!.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),
@@ -1864,11 +1865,13 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                     ),
                                   ),
                                 ),
-                              ],
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Row(
+                          const SizedBox(height: 6),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 4,
                             children: [
                               // Class Badge
                               Container(
@@ -1887,45 +1890,71 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
                               // Parent Phone
-                              const Icon(LucideIcons.phone,
-                                  size: 13, color: AppColors.inkSecondary),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${student.parentName} (${student.parentPhone})',
-                                style: AppTypography.caption,
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(LucideIcons.phone,
+                                      size: 13, color: AppColors.inkSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${student.parentName} (${student.parentPhone})',
+                                    style: AppTypography.caption,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 14),
                               // PIN indicator
-                              const Icon(LucideIcons.keyRound,
-                                  size: 13, color: AppColors.inkSecondary),
-                              const SizedBox(width: 4),
-                              Text(
-                                'PIN: ${student.pinHash}',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 11,
-                                  color: AppColors.inkSecondary,
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(LucideIcons.keyRound,
+                                      size: 13, color: AppColors.inkSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'PIN: ${student.pinHash}',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 11,
+                                      color: AppColors.inkSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
 
-                    // Edit Button
-                    ElevatedButton.icon(
-                      onPressed: () => _openEditStudentDialog(student),
-                      icon: const Icon(LucideIcons.pencil, size: 14),
-                      label: const Text('Edit Student'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.cardSurface,
-                        foregroundColor: AppColors.brandPrimary,
-                        elevation: 0,
-                        side: const BorderSide(color: AppColors.brandPrimary),
+                    // Edit Button (compact tactile pill)
+                    TactileFeedback(
+                      onTap: () => _openEditStudentDialog(student),
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.brandPrimary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(LucideIcons.pencil,
+                                size: 13, color: AppColors.brandPrimary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.brandPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -3057,62 +3086,52 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Master Timetable Chart for ${selectedClass.displayName}',
-                            style: AppTypography.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Students and parents view this timetable in their daily student schedule and Unified In-App Viewer.',
-                          style: AppTypography.caption,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
+              Text(
+                'Master Timetable Chart for ${selectedClass.displayName}',
+                style: AppTypography.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: hasUploadedFile
+                      ? const Color(0xFFD1FAE5)
+                      : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasUploadedFile
+                          ? LucideIcons.checkCircle2
+                          : LucideIcons.clock,
+                      size: 14,
                       color: hasUploadedFile
-                          ? const Color(0xFFD1FAE5)
-                          : const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(8),
+                          ? AppColors.success
+                          : const Color(0xFFD97706),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          hasUploadedFile
-                              ? LucideIcons.checkCircle2
-                              : LucideIcons.clock,
-                          size: 14,
-                          color: hasUploadedFile
-                              ? AppColors.success
-                              : const Color(0xFFD97706),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          hasUploadedFile
-                              ? 'Uploaded (Document)'
-                              : 'Default Schedule Active',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: hasUploadedFile
-                                ? AppColors.success
-                                : const Color(0xFFD97706),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    Text(
+                      hasUploadedFile
+                          ? 'Uploaded (Document)'
+                          : 'Default Schedule Active',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: hasUploadedFile
+                            ? AppColors.success
+                            : const Color(0xFFD97706),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Students and parents view this timetable in their daily student schedule and Unified In-App Viewer.',
+                style: AppTypography.caption,
               ),
               const SizedBox(height: 16),
               Container(

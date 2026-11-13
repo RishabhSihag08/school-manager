@@ -511,20 +511,22 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
                 : TactileFeedback(
                     onTap: _saveSyllabus,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.brandPrimary,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(LucideIcons.save, color: Colors.white, size: 16),
-                          const SizedBox(width: 6),
+                          Icon(LucideIcons.save, color: Colors.white, size: 15),
+                          SizedBox(width: 4),
                           Text(
-                            'Save Live',
-                            style: AppTypography.pillLabel.copyWith(
+                            'Save',
+                            style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -559,15 +561,17 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
 
                       // Chapters Section Header
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(LucideIcons.listOrdered, size: 18, color: AppColors.brandPrimary),
-                              const SizedBox(width: 8),
-                              Text('Chapters & Exam Weightages', style: AppTypography.titleMedium),
-                            ],
+                          const Icon(LucideIcons.listOrdered, size: 18, color: AppColors.brandPrimary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Chapters & Weightages',
+                              style: AppTypography.titleMedium,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           TactileFeedback(
                             onTap: () => _openChapterDialog(),
                             child: Container(
@@ -577,11 +581,12 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(LucideIcons.plus, size: 14, color: AppColors.brandPrimary),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '+ Add Chapter',
+                                    'Add Chapter',
                                     style: AppTypography.caption.copyWith(
                                       color: AppColors.brandPrimary,
                                       fontWeight: FontWeight.bold,
@@ -980,37 +985,35 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(LucideIcons.cloudCheck, color: AppColors.brandPrimary, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Publish to Student Vault', style: AppTypography.titleSmall),
-                Text(
-                  'Students enrolled in ${widget.className} see updates immediately.',
-                  style: AppTypography.caption.copyWith(color: AppColors.inkMuted),
+          Row(
+            children: [
+              const Icon(LucideIcons.cloudCheck, color: AppColors.brandPrimary, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Publish to Student Vault', style: AppTypography.titleSmall),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: _isSaving ? null : _saveSyllabus,
+                icon: const Icon(LucideIcons.send, size: 14),
+                label: const Text('Publish', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPrimary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: _isSaving ? null : _saveSyllabus,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandPrimary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Text('Save & Publish', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(
+            'Students enrolled in ${widget.className} see updates immediately.',
+            style: AppTypography.caption.copyWith(color: AppColors.inkMuted),
           ),
         ],
       ),

@@ -1,3 +1,39 @@
+# School Manager v1.0.10 Release Notes 🚀
+
+**Release Date:** November 13, 2026  
+**Build:** `1.0.10+10`
+
+---
+
+## 🎨 UI/UX Ergonomic Refinements & Layout Polish Release (v1.0.10)
+
+This release delivers comprehensive UI/UX ergonomic enhancements and layout fixes across all mobile screen resolutions (360dp–390dp), informed directly by visual layout audits.
+
+### 1. 📐 Anti-Warping & Layout Boundary Optimization
+- **Single-Line Attendance Metric**: Wrapped attendance percentages and titles in responsive `FittedBox` containers, completely eliminating multi-line word breaks ("Attendan ce").
+- **Timetable Section Re-architected**: Relocated the `Uploaded (Document)` / `Default Schedule Active` badge beneath class titles into its own row, eliminating horizontal title squeezing.
+- **Academic Quick Bar Sizing**: Fine-tuned icon and typography scales (`11.5sp`) so "Timetable", "Syllabus", and "Notices" render without truncation.
+- **Mission Streak Badge Constrained**: Applied flex boundaries to the "Today's Homework Mission" header so the streak flame badge never overflows off the right edge.
+- **Syllabus Header & Action Alignment**: Converted syllabus title and chapter actions to flexible horizontal wraps with compact "Save" and "Add Chapter" actions, preventing button push-outs.
+- **Admin Student Directory Records**: Converted student metadata into flexible chips and streamlined "Edit" action buttons to prevent overlapping with roll numbers and contact details.
+
+### 2. 📱 Clean Input Fields & Production Onboarding
+- **Demo Access Removed**: Removed "QUICK DEMO ACCESS" banner and demo auto-fill buttons from `WelcomeRoleScreen` and `JoinClassCodeScreen`.
+- **Zero Prefilled Fields**: All input controllers (PINs, codes, titles, marks) start empty with intuitive placeholder hints.
+- **Excel Wizard Preset Chips**: Exam maximum marks chips (`20`, `25`, `40`, `50`, `80`, `100`) wrap cleanly across rows without running off the right screen border; maximum marks input initializes clean.
+
+### 3. 🎯 Homework Cards & Interactive Expanded View
+- **Clean Description Card**: Replaced dark chalkboard styling with a clean, light-mode `BentoCard` matching application typography and design tokens.
+- **Concise Media Badges**: Homework feeds now display clean summary chips (`📄 1 PDF`, `🖼️ 1 Photo`, `▶️ 1 Video`) instead of raw technical filenames.
+- **Interactive Expanded Homework Sheet**: Tapping any homework card opens an expanded modal bottom sheet with full task descriptions, direct attachment previews in `UnifiedMediaViewer`, and one-tap completion toggles.
+
+### 4. ⚡ Padding & Dialog Ergonomics
+- **Dense Tactile Geometry**: Reduced default `BentoCard` padding from 16dp to 13dp and standard screen horizontal margins from 20dp down to 14dp, maximizing content density on mobile displays.
+- **Clean Update Screen**: Removed changelog release notes box from `OtaUpdateDialog`, presenting a focused, streamlined update experience.
+- **Monthly Attendance Milestone**: Adjusted percentage and compliance badge layouts to guarantee zero overlap with the 75% CBSE milestone ring.
+
+---
+
 # School Manager v1.0.9 Release Notes 🚀
 
 **Release Date:** November 13, 2026  

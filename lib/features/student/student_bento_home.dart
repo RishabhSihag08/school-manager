@@ -137,7 +137,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                 color: AppColors.canvasBackground,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -381,7 +381,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -701,7 +701,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
     int streak,
   ) {
     return BentoCard(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       backgroundColor: AppColors.cardSurface,
       borderColor: AppColors.brandPrimary.withValues(alpha: 0.2),
       child: Column(
@@ -710,29 +710,35 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.coralLight,
-                      borderRadius: BorderRadius.circular(10),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AppColors.coralLight,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        LucideIcons.flame,
+                        color: AppColors.coralStreak,
+                        size: 18,
+                      ),
                     ),
-                    child: const Icon(
-                      LucideIcons.flame,
-                      color: AppColors.coralStreak,
-                      size: 20,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Today\'s Homework Mission',
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Today\'s Homework Mission',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               StreakFlamePopBadge(streak: streak),
             ],
           ),
@@ -782,7 +788,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
         // Left Square Card: Attendance Ring
         Expanded(
           child: BentoCard(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             onTap: () => context.push(AppRoutes.studentAttendance),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -822,13 +828,13 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     // Circular progress ring
                     SizedBox(
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -842,7 +848,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                             builder: (context, val, _) {
                               return CircularProgressIndicator(
                                 value: val,
-                                strokeWidth: 4.5,
+                                strokeWidth: 4,
                                 strokeCap: StrokeCap.round,
                                 backgroundColor: AppColors.secondarySurface,
                                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -851,49 +857,71 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                               );
                             },
                           ),
-                          Text(
-                            '${_attendancePct.toStringAsFixed(0)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.inkPrimary,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Padding(
+                              padding: const EdgeInsets.all(2),
+                              child: Text(
+                                '${_attendancePct.toStringAsFixed(0)}%',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.inkPrimary,
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            '${_attendancePct.toStringAsFixed(1)}%',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.inkPrimary,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${_attendancePct.toStringAsFixed(1)}%',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.inkPrimary,
+                              ),
                             ),
                           ),
-                          Text('Attendance', style: AppTypography.titleSmall),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Attendance',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.inkSecondary,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text('Tap for calendar', style: AppTypography.bodySmall),
               ],
             ),
           ),
         ),
 
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
 
         // Right Square Card: Exam Hub
         Expanded(
           child: BentoCard(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             onTap: () => context.push(AppRoutes.studentResults),
             child: _latestExamSummary != null
                 ? Column(
@@ -1095,29 +1123,31 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
     required VoidCallback onTap,
   }) {
     return BentoCard(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
       onTap: onTap,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(5),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: AppColors.brandPrimaryLight,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, size: 14, color: AppColors.brandPrimary),
+            child: Icon(icon, size: 13, color: AppColors.brandPrimary),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.pillLabel.copyWith(
-                color: AppColors.inkPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: GoogleFonts.plusJakartaSans(
+                  color: AppColors.inkPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.5,
+                ),
               ),
             ),
           ),
@@ -1132,7 +1162,8 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: BentoCard(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(13),
+        onTap: () => _openHomeworkExpandedDetail(hw),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1229,59 +1260,312 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.inkSecondary,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                   if (hw.attachments.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: hw.attachments.map((att) {
-                        return TactileFeedback(
-                          onTap: () {
-                            UnifiedMediaViewer.show(context, items: hw.attachments);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondarySurface,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.cardBorder),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  att.type == 'pdf'
-                                      ? LucideIcons.fileText
-                                      : LucideIcons.image,
-                                  size: 13,
-                                  color: AppColors.brandPrimary,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  att.title,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.inkPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                    const SizedBox(height: 8),
+                    _buildMediaSummaryBadges(hw.attachments, context),
                   ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMediaSummaryBadges(List<MediaAttachmentItem> attachments, BuildContext context) {
+    int pdfCount = 0;
+    int photoCount = 0;
+    int videoCount = 0;
+
+    for (final att in attachments) {
+      final t = att.type.toString().toLowerCase();
+      if (t == 'pdf') {
+        pdfCount++;
+      } else if (t == 'video') {
+        videoCount++;
+      } else {
+        photoCount++;
+      }
+    }
+
+    final chips = <Widget>[];
+
+    if (pdfCount > 0) {
+      chips.add(_mediaChip(
+        icon: LucideIcons.fileText,
+        label: '$pdfCount ${pdfCount == 1 ? 'PDF' : 'PDFs'}',
+        color: const Color(0xFFDC2626),
+        bg: const Color(0xFFFEF2F2),
+        onTap: () => UnifiedMediaViewer.show(context, items: attachments),
+      ));
+    }
+    if (photoCount > 0) {
+      chips.add(_mediaChip(
+        icon: LucideIcons.image,
+        label: '$photoCount ${photoCount == 1 ? 'Photo' : 'Photos'}',
+        color: AppColors.brandPrimary,
+        bg: AppColors.brandPrimaryLight,
+        onTap: () => UnifiedMediaViewer.show(context, items: attachments),
+      ));
+    }
+    if (videoCount > 0) {
+      chips.add(_mediaChip(
+        icon: LucideIcons.video,
+        label: '$videoCount ${videoCount == 1 ? 'Video' : 'Videos'}',
+        color: const Color(0xFF7C3AED),
+        bg: const Color(0xFFF5F3FF),
+        onTap: () => UnifiedMediaViewer.show(context, items: attachments),
+      ));
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: chips,
+    );
+  }
+
+  Widget _mediaChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color bg,
+    required VoidCallback onTap,
+  }) {
+    return TactileFeedback(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openHomeworkExpandedDetail(Homework hw) {
+    final (bg, fg) = AppColors.getSubjectColors(hw.subjectName);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            decoration: const BoxDecoration(
+              color: AppColors.cardSurface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: bg,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                hw.subjectName,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: fg,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondarySurface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppColors.cardBorder),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(LucideIcons.calendar, size: 13, color: AppColors.inkSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Due ${DateFormat('EEEE, MMM d, y').format(hw.dueDate)}',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.inkSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          hw.title,
+                          style: AppTypography.headlineSmall.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.inkPrimary,
+                          ),
+                        ),
+                        if (hw.description != null && hw.description!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondarySurface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.cardBorder),
+                            ),
+                            child: Text(
+                              hw.description!,
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.inkPrimary,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (hw.attachments.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            'Attachments & Learning Material (${hw.attachments.length})',
+                            style: AppTypography.titleSmall,
+                          ),
+                          const SizedBox(height: 8),
+                          ...hw.attachments.map((att) {
+                            return BentoCard(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              onTap: () {
+                                UnifiedMediaViewer.show(context, items: hw.attachments);
+                              },
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: att.type == 'pdf'
+                                          ? const Color(0xFFFEF2F2)
+                                          : (att.type == 'video' ? const Color(0xFFF5F3FF) : AppColors.brandPrimaryLight),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      att.type == 'pdf'
+                                          ? LucideIcons.fileText
+                                          : (att.type == 'video' ? LucideIcons.video : LucideIcons.image),
+                                      size: 16,
+                                      color: att.type == 'pdf'
+                                          ? const Color(0xFFEF4444)
+                                          : (att.type == 'video' ? const Color(0xFF8B5CF6) : AppColors.brandPrimary),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          att.title,
+                                          style: AppTypography.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          att.type == 'pdf' ? 'PDF Document • Tap to preview' : (att.type == 'video' ? 'Video Lesson • Tap to play' : 'Photo Image • Tap to view'),
+                                          style: AppTypography.caption,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.inkMuted),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                        const SizedBox(height: 20),
+                        // Toggle Completion Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _toggleHomework(hw);
+                              Navigator.pop(ctx);
+                            },
+                            icon: Icon(
+                              hw.isCompleted ? LucideIcons.checkCheck : LucideIcons.circle,
+                              size: 18,
+                            ),
+                            label: Text(
+                              hw.isCompleted ? 'Mark as Incomplete' : 'Mark as Completed',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hw.isCompleted ? const Color(0xFF059669) : AppColors.brandPrimary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

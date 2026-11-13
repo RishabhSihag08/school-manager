@@ -105,7 +105,7 @@ class _StudentAttendanceCalendarScreenState
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -157,19 +157,19 @@ class _StudentAttendanceCalendarScreenState
                   children: [
                     Text('Overall Attendance', style: AppTypography.bodySmall),
                     const SizedBox(height: 2),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
                       children: [
                         Text(
                           '$percentage%',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 32,
+                            fontSize: 28,
                             fontWeight: FontWeight.w800,
                             color: isGood ? AppColors.success : AppColors.warning,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
@@ -177,7 +177,7 @@ class _StudentAttendanceCalendarScreenState
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            isGood ? 'CBSE Compliant (≥75%)' : 'Short Attendance',
+                            isGood ? 'CBSE Compliant' : 'Short Attendance',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -199,12 +199,15 @@ class _StudentAttendanceCalendarScreenState
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          '75% Milestone: CBSE Minimum Exam Eligibility',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: AppColors.inkMuted,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Text(
+                            '75% Milestone: CBSE Minimum Exam Eligibility',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: AppColors.inkMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

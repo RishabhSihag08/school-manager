@@ -299,7 +299,7 @@ class _CreateAccountScreenState extends ConsumerState<CreateAccountScreen> {
             constraints: const BoxConstraints(maxWidth: 680),
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

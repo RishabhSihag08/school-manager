@@ -79,37 +79,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
     }
   }
 
-  void _prefillDemoStudent() {
-    setState(() {
-      _selectedRole = 'student';
-      _studentRollController.text = '1';
-      _studentPinController.text = '1234';
-      if (_availableClasses.isNotEmpty) {
-        final class8b = _availableClasses.firstWhere(
-          (c) => c.grade == 8 && c.section.toUpperCase() == 'B',
-          orElse: () => _availableClasses.first,
-        );
-        _studentSelectedClass = class8b.id;
-      }
-    });
-  }
-
-  void _prefillDemoTeacher() {
-    setState(() {
-      _selectedRole = 'teacher';
-      _staffCodeController.text = 'T-101';
-      _staffPinController.text = '1234';
-    });
-  }
-
-  void _prefillDemoAdmin() {
-    setState(() {
-      _selectedRole = 'admin';
-      _staffCodeController.text = 'admin-01';
-      _staffPinController.text = '1234';
-    });
-  }
-
   Future<void> _submitStudentLogin() async {
     final rollStr = _studentRollController.text.trim();
     final pin = _studentPinController.text.trim();
@@ -251,7 +220,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: AnimatedSwitcher(
             duration: reduceMotion ? Duration.zero : AppMotion.durationStandard,
             switchInCurve: AppMotion.easeOut,
@@ -293,11 +262,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
         _buildSchoolBranding(),
 
         const SizedBox(height: 20),
-
-        // Quick Demo Pills Bar (Impeccable fast exploration)
-        _buildDemoLoginPillsBar(),
-
-        const SizedBox(height: 22),
 
         // Section Prompt
         Text(
@@ -363,135 +327,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
 
         const SizedBox(height: 24),
       ],
-    );
-  }
-
-  /// Horizontal Demo Login Pills for Instant Preview
-  Widget _buildDemoLoginPillsBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.secondarySurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(LucideIcons.sparkles, size: 14, color: AppColors.brandPrimary),
-              const SizedBox(width: 6),
-              Text(
-                'QUICK DEMO ACCESS',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.inkSecondary,
-                  letterSpacing: 0.6,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: [
-                _buildDemoPill(
-                  label: 'Demo Student',
-                  sub: 'Class 8-B',
-                  color: AppColors.brandPrimary,
-                  bg: AppColors.brandPrimaryLight,
-                  icon: LucideIcons.graduationCap,
-                  onTap: _prefillDemoStudent,
-                ),
-                const SizedBox(width: 8),
-                _buildDemoPill(
-                  label: 'Demo Teacher',
-                  sub: 'T-101',
-                  color: const Color(0xFF059669),
-                  bg: const Color(0xFFECFDF5),
-                  icon: LucideIcons.bookOpen,
-                  onTap: _prefillDemoTeacher,
-                ),
-                const SizedBox(width: 8),
-                _buildDemoPill(
-                  label: 'Demo Admin',
-                  sub: 'admin-01',
-                  color: const Color(0xFF7C3AED),
-                  bg: const Color(0xFFF5F3FF),
-                  icon: LucideIcons.shieldCheck,
-                  onTap: _prefillDemoAdmin,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDemoPill({
-    required String label,
-    required String sub,
-    required Color color,
-    required Color bg,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return TactileFeedback(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-              child: Icon(icon, size: 13, color: color),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.inkPrimary,
-                  ),
-                ),
-                Text(
-                  sub,
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -825,40 +660,14 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(LucideIcons.userCheck, color: AppColors.brandPrimary, size: 18),
-                      const SizedBox(width: 8),
-                      Text('Returning Student (Roll No + PIN)', style: AppTypography.titleSmall),
-                    ],
-                  ),
-                  // Demo Pre-fill Pill
-                  TactileFeedback(
-                    onTap: _prefillDemoStudent,
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 32),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(LucideIcons.sparkles, size: 12, color: AppColors.brandPrimary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Demo Fill',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.brandPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
+                  const Icon(LucideIcons.userCheck, color: AppColors.brandPrimary, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Returning Student (Roll No + PIN)',
+                      style: AppTypography.titleSmall,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -1018,7 +827,6 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
   Widget _buildStaffLoginCard(({Color color, Color bg, IconData icon, String title}) meta) {
     final isTeacher = _selectedRole == 'teacher';
     final codeHint = isTeacher ? 'Enter teacher login code' : 'Enter admin login code';
-    final demoCallback = isTeacher ? _prefillDemoTeacher : _prefillDemoAdmin;
 
     return BentoCard(
       padding: const EdgeInsets.all(20),
@@ -1026,40 +834,14 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(meta.icon, color: meta.color, size: 20),
-                  const SizedBox(width: 8),
-                  Text('${meta.title} Login', style: AppTypography.titleMedium),
-                ],
-              ),
-              // Demo Pill
-              TactileFeedback(
-                onTap: demoCallback,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 32),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: meta.bg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.sparkles, size: 12, color: meta.color),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Demo Fill',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: meta.color,
-                        ),
-                      ),
-                    ],
-                  ),
+              Icon(meta.icon, color: meta.color, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${meta.title} Login',
+                  style: AppTypography.titleMedium,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

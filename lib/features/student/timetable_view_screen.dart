@@ -163,7 +163,7 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
                 color: AppColors.canvasBackground,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -790,26 +790,32 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
         _days.firstWhere((d) => d.key == _selectedDay, orElse: () => _days.first).full;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const Icon(
-                LucideIcons.clock,
-                size: 15,
-                color: AppColors.brandPrimary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$currentDayFull Schedule',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.w700,
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(
+                  LucideIcons.clock,
+                  size: 15,
+                  color: AppColors.brandPrimary,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '$currentDayFull Schedule',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           TactileFeedback(
             onTap: _showMasterTimetableModal,
             child: Container(
