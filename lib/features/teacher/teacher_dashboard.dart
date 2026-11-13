@@ -1088,6 +1088,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
+            Color(0xFF28256E), // Deepest Midnight Indigo
             Color(0xFF3730A3), // Deep Indigo
             Color(0xFF4F46E5), // Electric Indigo
           ],
@@ -1095,11 +1096,15 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4F46E5).withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -1112,14 +1117,18 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(LucideIcons.crown, color: Colors.amber, size: 14),
+                    const Icon(LucideIcons.crown, color: Color(0xFFFDE047), size: 14),
                     const SizedBox(width: 6),
                     Text(
                       'CLASS IN CHARGE',
@@ -1135,20 +1144,58 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               if (_isCodeLocked)
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.9),
+                    color: AppColors.warning.withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(LucideIcons.lock,
                           color: Colors.white, size: 12),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 5),
                       Text(
                         'LOCKED',
                         style: AppTypography.monospace(
-                          fontSize: 10,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(LucideIcons.unlock,
+                          color: Colors.white, size: 12),
+                      const SizedBox(width: 5),
+                      Text(
+                        'OPEN',
+                        style: AppTypography.monospace(
+                          fontSize: 10.5,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -1159,15 +1206,16 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // Class Name Title
           Text(
             '$className (Academic Year ${AppConfig.currentAcademicYear})',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
               color: Colors.white,
+              letterSpacing: -0.3,
             ),
           ),
 
@@ -1175,10 +1223,10 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
 
           // 6-Character Join Code Box
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.black.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.2),
                 width: 1,
@@ -1186,9 +1234,16 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.ticket,
-                    color: Color(0xFFFDE68A), size: 20),
-                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFDE68A).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(LucideIcons.ticket,
+                      color: Color(0xFFFDE68A), size: 20),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1197,66 +1252,89 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                         'STUDENT CLASS JOIN CODE',
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.75),
                           letterSpacing: 0.8,
                         ),
                       ),
+                      const SizedBox(height: 1),
                       Text(
                         _classCode.isNotEmpty ? _classCode : 'PENDING',
                         style: GoogleFonts.jetBrainsMono(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFFFDE68A), // Soft gold
-                          letterSpacing: 2.0,
+                          letterSpacing: 2.5,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Copy Button
-                TactileFeedback(
-                  onTap: _copyClassCode,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                // Copy Button with Tooltip
+                Tooltip(
+                  message: 'Copy Join Code',
+                  child: TactileFeedback(
+                    onTap: _copyClassCode,
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Icon(LucideIcons.copy,
+                          color: Colors.white, size: 16),
                     ),
-                    child: const Icon(LucideIcons.copy,
-                        color: Colors.white, size: 16),
                   ),
                 ),
-                const SizedBox(width: 6),
-                // Share Button
-                TactileFeedback(
-                  onTap: () => _shareClassCode(className),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 8),
+                // Share Button with Tooltip
+                Tooltip(
+                  message: 'Share Class Join Link',
+                  child: TactileFeedback(
+                    onTap: () => _shareClassCode(className),
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: const Icon(LucideIcons.share2,
+                          color: Colors.white, size: 16),
                     ),
-                    child: const Icon(LucideIcons.share2,
-                        color: Colors.white, size: 16),
                   ),
                 ),
-                const SizedBox(width: 6),
-                // Lock Toggle Button
-                TactileFeedback(
-                  onTap: () => _toggleLockCode(classId),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _isCodeLocked
-                          ? AppColors.warning
-                          : Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _isCodeLocked ? LucideIcons.lock : LucideIcons.unlock,
-                      color: Colors.white,
-                      size: 16,
+                const SizedBox(width: 8),
+                // Lock Toggle Button with Tooltip
+                Tooltip(
+                  message: _isCodeLocked
+                      ? 'Unlock Registration for Students'
+                      : 'Lock Code (Freeze Enrollment)',
+                  child: TactileFeedback(
+                    onTap: () => _toggleLockCode(classId),
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: _isCodeLocked
+                            ? AppColors.warning
+                            : Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: _isCodeLocked
+                              ? AppColors.warning
+                              : Colors.white.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Icon(
+                        _isCodeLocked ? LucideIcons.lock : LucideIcons.unlock,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -1279,7 +1357,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                        horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: _attendanceDoneToday
                           ? const Color(0xFF065F46) // Deep Emerald
@@ -1287,9 +1365,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                          color: Colors.black.withValues(alpha: 0.14),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -1309,7 +1387,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                         Flexible(
                           child: Text(
                             _attendanceDoneToday
-                                ? 'Done ($_presentCount/$_totalCount)'
+                                ? 'Attendance Done ($_presentCount/$_totalCount)'
                                 : 'Take Attendance',
                             style: AppTypography.button.copyWith(
                               fontSize: 13,
@@ -1327,7 +1405,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
               // 2. Class Roster Button - Real student count
               Expanded(
@@ -1336,12 +1414,12 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   onTap: () => _openRosterSheet(classId, className),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 12),
+                        horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
+                        color: Colors.white.withValues(alpha: 0.28),
                       ),
                     ),
                     child: Row(
@@ -1353,8 +1431,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                         Text(
                           'Roster ($_rosterStudentCount)',
                           style: AppTypography.button.copyWith(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             color: Colors.white,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -1363,23 +1442,26 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
               // 3. Class Notice Button
-              TactileFeedback(
-                onTap: () =>
-                    _openNoticeDialog(classId: classId, className: className),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25),
+              Tooltip(
+                message: 'Post Notice to Class',
+                child: TactileFeedback(
+                  onTap: () =>
+                      _openNoticeDialog(classId: classId, className: className),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.28),
+                      ),
                     ),
+                    child: const Icon(LucideIcons.megaphone,
+                        color: Colors.white, size: 18),
                   ),
-                  child: const Icon(LucideIcons.megaphone,
-                      color: Colors.white, size: 18),
                 ),
               ),
             ],
@@ -1398,9 +1480,16 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.bookOpen,
-                    size: 18, color: AppColors.brandPrimary),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.brandPrimaryLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(LucideIcons.bookOpen,
+                      size: 18, color: AppColors.brandPrimary),
+                ),
+                const SizedBox(width: 10),
                 Text('My Subject Allocations',
                     style: AppTypography.titleLarge),
               ],
@@ -1420,47 +1509,87 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         if (_subjectAllocations.isEmpty)
           BentoCard(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Center(
-              child: Text(
-                'No sections currently allocated for your subject.',
-                style: AppTypography.bodySmall
-                    .copyWith(color: AppColors.inkSecondary),
+              child: Column(
+                children: [
+                  const Icon(LucideIcons.bookOpen,
+                      size: 36, color: AppColors.inkMuted),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No Subject Allocations Yet',
+                    style: AppTypography.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'No sections currently allocated for your subject. Classes assigned by school admin will appear here.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                ],
               ),
             ),
           )
         else
-          ..._subjectAllocations.map((alloc) {
-            final className = alloc['class_name'] as String? ?? 'Class';
-            final classId = alloc['class_section_id'] as String? ??
-                alloc['class_id'] as String? ??
-                '';
-            final subjectName =
-                alloc['subject_name'] as String? ?? 'Mathematics';
-            final subjectCode = alloc['subject_code'] as String? ?? 'MATH';
-            final isHomeroom = alloc['is_homeroom'] as bool? ?? false;
-            final studentCount = alloc['student_count'] as int? ?? 0;
-            final schedule =
-                alloc['schedule'] as String? ?? 'Scheduled Weekly';
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 640;
+              if (isWide) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    mainAxisExtent: 165,
+                  ),
+                  itemCount: _subjectAllocations.length,
+                  itemBuilder: (context, index) {
+                    final alloc = _subjectAllocations[index];
+                    return _buildAllocCardFromData(alloc);
+                  },
+                );
+              }
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildSubjectCard(
-                className: className,
-                classId: classId,
-                subjectName: subjectName,
-                subjectCode: subjectCode,
-                isHomeroom: isHomeroom,
-                studentCount: studentCount,
-                schedule: schedule,
-              ),
-            );
-          }),
+              return Column(
+                children: _subjectAllocations.map((alloc) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildAllocCardFromData(alloc),
+                  );
+                }).toList(),
+              );
+            },
+          ),
       ],
+    );
+  }
+
+  Widget _buildAllocCardFromData(Map<String, dynamic> alloc) {
+    final className = alloc['class_name'] as String? ?? 'Class';
+    final classId = alloc['class_section_id'] as String? ??
+        alloc['class_id'] as String? ??
+        '';
+    final subjectName = alloc['subject_name'] as String? ?? 'Mathematics';
+    final subjectCode = alloc['subject_code'] as String? ?? 'MATH';
+    final isHomeroom = alloc['is_homeroom'] as bool? ?? false;
+    final studentCount = alloc['student_count'] as int? ?? 0;
+    final schedule = alloc['schedule'] as String? ?? 'Scheduled Weekly';
+
+    return _buildSubjectCard(
+      className: className,
+      classId: classId,
+      subjectName: subjectName,
+      subjectCode: subjectCode,
+      isHomeroom: isHomeroom,
+      studentCount: studentCount,
+      schedule: schedule,
     );
   }
 

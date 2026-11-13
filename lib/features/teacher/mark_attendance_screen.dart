@@ -268,118 +268,11 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   }
 
   Widget _buildStudentTile(Student student, AttendanceStatus status) {
-    Color bgColor;
-    Color borderColor;
-    Color statusColor;
-    String statusLabel;
-    IconData statusIcon;
-
-    switch (status) {
-      case AttendanceStatus.absent:
-        bgColor = const Color(0xFFFEE2E2); // Danger Light
-        borderColor = AppColors.danger;
-        statusColor = AppColors.danger;
-        statusLabel = 'ABSENT';
-        statusIcon = LucideIcons.x;
-        break;
-      case AttendanceStatus.leave:
-        bgColor = const Color(0xFFFEF3C7); // Amber Light
-        borderColor = AppColors.warning;
-        statusColor = AppColors.warning;
-        statusLabel = 'LEAVE';
-        statusIcon = LucideIcons.clock;
-        break;
-      case AttendanceStatus.late:
-      case AttendanceStatus.present:
-        bgColor = const Color(0xFFD1FAE5); // Emerald Mint
-        borderColor = AppColors.success;
-        statusColor = AppColors.success;
-        statusLabel = 'PRESENT';
-        statusIcon = LucideIcons.check;
-        break;
-    }
-
-    return TactileFeedback(
+    return _StudentAttendanceCard(
+      student: student,
+      status: status,
       onTap: () => _onStudentTap(student.id),
       onLongPress: () => _onStudentLongPress(student.id),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: borderColor, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: borderColor.withValues(alpha: 0.12),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Top Row: Roll No Badge + Status Indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.cardBorder, width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      student.rollNo.toString(),
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.inkPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                Icon(statusIcon, color: statusColor, size: 16),
-              ],
-            ),
-
-            // Student Name
-            Text(
-              student.fullName,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.inkPrimary,
-              ),
-            ),
-
-            // Status Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                statusLabel,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -391,8 +284,8 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
         border: const Border(top: BorderSide(color: AppColors.cardBorder)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
             offset: const Offset(0, -4),
           ),
         ],
@@ -400,56 +293,104 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            // Counters Block
+            // Counters & Summary Text Block
             Expanded(
-              flex: 5,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _counterBadge('Present', _presentCount, AppColors.success),
-                  _counterBadge('Absent', _absentCount, AppColors.danger),
-                  _counterBadge('Leave', _leaveCount, AppColors.warning),
+                  Row(
+                    children: [
+                      Text(
+                        'Present: $_presentCount • Absent: $_absentCount',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.inkPrimary,
+                        ),
+                      ),
+                      if (_leaveCount > 0) ...[
+                        Text(
+                          ' • Leave: $_leaveCount',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.success,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${((_students.isEmpty ? 0 : (_presentCount / _students.length) * 100)).toStringAsFixed(0)}% Attendance Rate (${_students.length} Total)',
+                        style: AppTypography.caption.copyWith(
+                          fontSize: 11,
+                          color: AppColors.inkSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(width: 12),
 
-            // Submit Button
-            Expanded(
-              flex: 5,
-              child: TactileFeedback(
-                onTap: _isSubmitting ? null : _submitAttendance,
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.brandPrimary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(LucideIcons.check,
-                                  color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Submit (${_students.length})',
-                                style: AppTypography.button
-                                    .copyWith(color: Colors.white),
-                              ),
-                            ],
+            // Submit Attendance Button
+            TactileFeedback(
+              onTap: _isSubmitting ? null : _submitAttendance,
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimary,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
                           ),
-                  ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(LucideIcons.check,
+                                color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Submit Attendance',
+                              style: AppTypography.button.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -458,27 +399,204 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
       ),
     );
   }
+}
 
-  Widget _counterBadge(String label, int count, Color color) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          count.toString(),
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: color,
+/// Tactile Student Roll Call Card with spring bounce scale & border morphing on toggle
+class _StudentAttendanceCard extends StatefulWidget {
+  final Student student;
+  final AttendanceStatus status;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _StudentAttendanceCard({
+    required this.student,
+    required this.status,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  State<_StudentAttendanceCard> createState() => _StudentAttendanceCardState();
+}
+
+class _StudentAttendanceCardState extends State<_StudentAttendanceCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.94)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.94, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 50,
+      ),
+    ]).animate(_bounceController);
+  }
+
+  @override
+  void didUpdateWidget(covariant _StudentAttendanceCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.status != widget.status) {
+      _bounceController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color bgColor;
+    Color borderColor;
+    Color statusColor;
+    String statusLabel;
+    IconData statusIcon;
+    double borderWidth;
+
+    switch (widget.status) {
+      case AttendanceStatus.absent:
+        bgColor = const Color(0xFFFEE2E2); // Danger Light
+        borderColor = AppColors.danger;
+        statusColor = AppColors.danger;
+        statusLabel = 'ABSENT';
+        statusIcon = LucideIcons.x;
+        borderWidth = 2.0;
+        break;
+      case AttendanceStatus.leave:
+        bgColor = const Color(0xFFFEF3C7); // Amber Light
+        borderColor = AppColors.warning;
+        statusColor = AppColors.warning;
+        statusLabel = 'LEAVE';
+        statusIcon = LucideIcons.clock;
+        borderWidth = 2.0;
+        break;
+      case AttendanceStatus.late:
+      case AttendanceStatus.present:
+        bgColor = const Color(0xFFD1FAE5); // Emerald Mint Light
+        borderColor = AppColors.success;
+        statusColor = AppColors.success;
+        statusLabel = 'PRESENT';
+        statusIcon = LucideIcons.check;
+        borderWidth = 1.5;
+        break;
+    }
+
+    return TactileFeedback(
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: [
+              BoxShadow(
+                color: borderColor.withValues(alpha: 0.16),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Top Row: Roll No Badge + Status Indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: borderColor.withValues(alpha: 0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        widget.student.rollNo.toString(),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.inkPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(statusIcon, color: statusColor, size: 14),
+                  ),
+                ],
+              ),
+
+              // Student Name
+              Text(
+                widget.student.fullName,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.inkPrimary,
+                ),
+              ),
+
+              // Status Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          label,
-          style: AppTypography.caption.copyWith(
-            fontSize: 10,
-            color: AppColors.inkMuted,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

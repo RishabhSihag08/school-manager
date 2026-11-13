@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/models/models.dart';
@@ -424,61 +425,104 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Target Class & Subject',
-                      style: AppTypography.titleSmall),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Target Class & Subject',
+                          style: AppTypography.titleSmall),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: subjectColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: subjectColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          _selectedSubjectCode,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: subjectColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _assignedClasses.any((item) => item['class_id'] == _selectedClassId)
-                        ? _selectedClassId
-                        : (_assignedClasses.isNotEmpty ? _assignedClasses.first['class_id'] as String : null),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: AppColors.canvasBackground,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.cardBorder),
+                  // Styled Subject Pill Dropdown
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.canvasBackground,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: _assignedClasses.any((item) => item['class_id'] == _selectedClassId)
+                            ? _selectedClassId
+                            : (_assignedClasses.isNotEmpty ? _assignedClasses.first['class_id'] as String : null),
+                        icon: const Icon(LucideIcons.chevronDown,
+                            size: 18, color: AppColors.inkSecondary),
+                        items: _assignedClasses.map((item) {
+                          final subCode = item['subject_code'] as String? ?? 'GEN';
+                          final (subBg, subFg) = AppColors.getSubjectColors(subCode);
+                          return DropdownMenuItem<String>(
+                            value: item['class_id'] as String,
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: subBg,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    subCode,
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: subFg,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '${item['class_name']} • ${item['subject_name']}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.inkPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final found = _assignedClasses.firstWhere(
+                              (c) => c['class_id'] == val,
+                            );
+                            setState(() {
+                              _selectedClassId = val;
+                              _selectedClassName = found['class_name'] as String;
+                              _selectedSubjectCode =
+                                  found['subject_code'] as String;
+                              _selectedSubjectName =
+                                  found['subject_name'] as String;
+                            });
+                          }
+                        },
                       ),
                     ),
-                    items: _assignedClasses.map((item) {
-                      return DropdownMenuItem<String>(
-                        value: item['class_id'] as String,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: subjectColor,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${item['class_name']} • ${item['subject_name']}',
-                              style: AppTypography.bodyMedium,
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        final found = _assignedClasses.firstWhere(
-                          (c) => c['class_id'] == val,
-                        );
-                        setState(() {
-                          _selectedClassId = val;
-                          _selectedClassName = found['class_name'] as String;
-                          _selectedSubjectCode =
-                              found['subject_code'] as String;
-                          _selectedSubjectName =
-                              found['subject_name'] as String;
-                        });
-                      }
-                    },
                   ),
                 ],
               ),
@@ -486,13 +530,14 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
 
             const SizedBox(height: 16),
 
-            // Title & Due Date Row
+            // Homework Title & Submission Date
             BentoCard(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Homework Details', style: AppTypography.titleSmall),
+                  Text('Homework Assignment Details',
+                      style: AppTypography.titleSmall),
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _titleController,
@@ -502,28 +547,8 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                             : null,
                     decoration: InputDecoration(
                       labelText: 'Title / Chapter Name *',
-                      hintText: 'Enter title or chapter name',
-                      filled: true,
-                      fillColor: AppColors.canvasBackground,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.cardBorder),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 4,
-                    validator: (val) =>
-                        (val == null || val.trim().isEmpty)
-                            ? 'Please provide instructions for students'
-                            : null,
-                    decoration: InputDecoration(
-                      labelText: 'Instructions for Students *',
-                      hintText:
-                          'Specify question numbers, notebook format, submission instructions...',
+                      hintText: 'e.g. Chapter 4: Linear Equations Exercise 4.2',
+                      prefixIcon: const Icon(LucideIcons.bookOpen, size: 18),
                       filled: true,
                       fillColor: AppColors.canvasBackground,
                       border: OutlineInputBorder(
@@ -538,38 +563,213 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                   // Due Date Picker Field
                   Row(
                     children: [
-                      const Icon(LucideIcons.calendar,
-                          size: 18, color: AppColors.brandPrimary),
-                      const SizedBox(width: 8),
-                      Text('Submission Due Date:',
-                          style: AppTypography.bodyMedium),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(LucideIcons.calendar,
+                            size: 16, color: AppColors.brandPrimary),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Submission Due Date',
+                              style: AppTypography.caption),
+                          Text(formattedDue,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppColors.inkPrimary,
+                              )),
+                        ],
+                      ),
                       const Spacer(),
                       TactileFeedback(
                         onTap: _pickDueDate,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: AppColors.canvasBackground,
+                            color: AppColors.brandPrimaryLight,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.cardBorder),
+                            border: Border.all(
+                                color: AppColors.brandPrimary
+                                    .withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
-                              Text(formattedDue,
-                                  style: AppTypography.monospace(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12.5,
-                                    color: AppColors.inkPrimary,
-                                  )),
-                              const SizedBox(width: 6),
+                              Text(
+                                'Change Date',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.brandPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
                               const Icon(LucideIcons.chevronDown,
-                                  size: 14, color: AppColors.inkMuted),
+                                  size: 14, color: AppColors.brandPrimary),
                             ],
                           ),
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Blackboard Instructions Section
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B), // Deep Chalkboard Slate
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(LucideIcons.presentation,
+                                size: 16, color: Color(0xFFFDE68A)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Blackboard Instructions *',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'CHALKBOARD VIEW',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF94A3B8),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Write blackboard instructions, problem numbers, or notes for students to copy.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11.5,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Quick Insert Pills
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _chalkPill('+ Question Numbers', () {
+                        final cur = _descriptionController.text;
+                        _descriptionController.text = cur.isEmpty
+                            ? '• Complete Questions: Q1, Q2, Q4, Q7 from Exercise '
+                            : '$cur\n• Complete Questions: Q1, Q2, Q4, Q7 from Exercise ';
+                      }),
+                      _chalkPill('+ Notebook Check', () {
+                        final cur = _descriptionController.text;
+                        _descriptionController.text = cur.isEmpty
+                            ? '• Write neatly in school fair notebook with step-by-step steps.'
+                            : '$cur\n• Write neatly in school fair notebook with step-by-step steps.';
+                      }),
+                      _chalkPill('+ Diagram & Formulas', () {
+                        final cur = _descriptionController.text;
+                        _descriptionController.text = cur.isEmpty
+                            ? '• Draw labeled diagram with pencil and state all relevant formulas.'
+                            : '$cur\n• Draw labeled diagram with pencil and state all relevant formulas.';
+                      }),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Chalkboard Text Area
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 5,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 13.5,
+                      color: const Color(0xFFF8FAFC), // Chalk White
+                      height: 1.5,
+                    ),
+                    validator: (val) =>
+                        (val == null || val.trim().isEmpty)
+                            ? 'Please provide blackboard instructions for students'
+                            : null,
+                    decoration: InputDecoration(
+                      hintText:
+                          'Write blackboard assignment here:\n• Exercise 4.2 Q1 to Q8\n• Show all working clearly in notebook\n• Due next class period...',
+                      hintStyle: GoogleFonts.jetBrainsMono(
+                        fontSize: 12.5,
+                        color: const Color(0xFF64748B),
+                      ),
+                      filled: true,
+                      fillColor: Colors.black.withValues(alpha: 0.25),
+                      contentPadding: const EdgeInsets.all(14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: AppColors.brandPrimary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -586,30 +786,49 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Media Attachments',
-                          style: AppTypography.titleSmall),
-                      Text(
-                        '${_attachments.length} Attached',
-                        style: AppTypography.caption
-                            .copyWith(color: AppColors.inkMuted),
+                      Row(
+                        children: [
+                          const Icon(LucideIcons.paperclip,
+                              size: 16, color: AppColors.brandPrimary),
+                          const SizedBox(width: 8),
+                          Text('Multi-Attachment Media',
+                              style: AppTypography.titleSmall),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimaryLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${_attachments.length} Attached',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.brandPrimary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Attach blackboard photos, worksheets, or concept videos for in-app viewing.',
+                    'Attach blackboard photos, PDF worksheets, or concept video lessons for students to stream.',
                     style: AppTypography.caption
                         .copyWith(color: AppColors.inkMuted),
                   ),
                   const SizedBox(height: 14),
 
-                  // 3 Attachment Action Buttons
+                  // 3 Multi-Attachment Upload Buttons
                   Row(
                     children: [
                       Expanded(
                         child: _mediaAddButton(
                           label: '+ Photo',
                           icon: LucideIcons.image,
+                          color: const Color(0xFF059669), // Emerald
                           onTap: () => _addMediaAttachment('image'),
                         ),
                       ),
@@ -618,6 +837,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                         child: _mediaAddButton(
                           label: '+ PDF Doc',
                           icon: LucideIcons.fileText,
+                          color: const Color(0xFFE11D48), // Crimson
                           onTap: () => _addMediaAttachment('pdf'),
                         ),
                       ),
@@ -626,6 +846,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                         child: _mediaAddButton(
                           label: '+ Video',
                           icon: LucideIcons.video,
+                          color: const Color(0xFF7C3AED), // Violet
                           onTap: () => _addMediaAttachment('video'),
                         ),
                       ),
@@ -639,64 +860,103 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                     const SizedBox(height: 10),
                     ...List.generate(_attachments.length, (idx) {
                       final item = _attachments[idx];
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => UnifiedMediaViewer.show(
-                          context,
-                          items: _attachments,
-                          initialIndex: idx,
+                      final isPdf = item.type == 'pdf';
+                      final isVideo = item.type == 'video';
+                      final icon = isPdf
+                          ? LucideIcons.fileText
+                          : (isVideo ? LucideIcons.video : LucideIcons.image);
+                      final badgeColor = isPdf
+                          ? const Color(0xFFE11D48)
+                          : (isVideo
+                              ? const Color(0xFF7C3AED)
+                              : const Color(0xFF059669));
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.canvasBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.canvasBackground,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.cardBorder),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => UnifiedMediaViewer.show(
+                            context,
+                            items: _attachments,
+                            initialIndex: idx,
                           ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              item.type == 'pdf'
-                                  ? LucideIcons.fileText
-                                  : (item.type == 'video'
-                                      ? LucideIcons.video
-                                      : LucideIcons.image),
-                              size: 18,
-                              color: AppColors.brandPrimary,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.title,
-                                    style: AppTypography.titleSmall
-                                        .copyWith(fontSize: 12),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: badgeColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  if ((item.sizeKb ?? 0) > 0)
-                                    Text(
-                                      '${item.sizeKb ?? 0} KB • Ready for in-app viewer',
-                                      style: AppTypography.caption
-                                          .copyWith(fontSize: 10),
-                                    ),
-                                ],
-                              ),
+                                  child: Icon(icon,
+                                      size: 18, color: badgeColor),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.title,
+                                        style: AppTypography.titleSmall
+                                            .copyWith(fontSize: 12.5),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: badgeColor
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              item.type.toUpperCase(),
+                                              style: GoogleFonts.jetBrainsMono(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: badgeColor,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            (item.sizeKb ?? 0) > 0
+                                                ? '${item.sizeKb} KB • Tap to preview'
+                                                : 'Tap to preview',
+                                            style: AppTypography.caption
+                                                .copyWith(fontSize: 10.5),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(LucideIcons.trash2,
+                                      size: 16, color: AppColors.danger),
+                                  onPressed: () => _removeAttachment(idx),
+                                  tooltip: 'Remove Attachment',
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: const Icon(LucideIcons.trash2,
-                                  size: 16, color: AppColors.danger),
-                              onPressed: () => _removeAttachment(idx),
-                              tooltip: 'Remove',
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
+                      );
                     }),
                   ],
                 ],
@@ -758,11 +1018,37 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
     );
   }
 
+  Widget _chalkPill(String label, VoidCallback onTap) {
+    return TactileFeedback(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFFDE68A),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _mediaAddButton({
     required String label,
     required IconData icon,
+    Color? color,
     required VoidCallback onTap,
   }) {
+    final effectiveColor = color ?? AppColors.brandPrimary;
     return TactileFeedback(
       onTap: onTap,
       child: Container(
@@ -775,9 +1061,14 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: AppColors.brandPrimary),
+            Icon(icon, size: 16, color: effectiveColor),
             const SizedBox(width: 6),
-            Text(label, style: AppTypography.pillLabel),
+            Text(
+              label,
+              style: AppTypography.pillLabel.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),

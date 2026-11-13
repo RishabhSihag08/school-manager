@@ -10,17 +10,19 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColors.canvasBackground,
+      scaffoldBackgroundColor: AppColors.surfaceCanvas,
       colorScheme: const ColorScheme.light(
         primary: AppColors.brandPrimary,
         onPrimary: AppColors.inkInverse,
-        surface: AppColors.cardSurface,
+        surface: AppColors.surfaceCard,
         onSurface: AppColors.inkPrimary,
+        surfaceContainerHighest: AppColors.surfaceField,
+        outline: AppColors.cardBorder,
         error: AppColors.danger,
         onError: AppColors.inkInverse,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.cardSurface,
+        color: AppColors.surfaceCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -29,7 +31,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.canvasBackground,
+        backgroundColor: AppColors.surfaceCanvas,
         foregroundColor: AppColors.inkPrimary,
         elevation: 0,
         centerTitle: false,
@@ -38,7 +40,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.secondarySurface,
+        fillColor: AppColors.surfaceField,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -80,6 +82,16 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
           textStyle: AppTypography.buttonLabel.copyWith(color: AppColors.inkPrimary),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.brandPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: AppTypography.buttonLabel.copyWith(color: AppColors.brandPrimary),
         ),
       ),
       dividerTheme: const DividerThemeData(

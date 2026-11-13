@@ -165,7 +165,9 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
 
           return TactileFeedback(
             onTap: () => _onTermChanged(term.key),
-            child: Container(
+            child: AnimatedContainer(
+              duration: AppMotion.durationFast,
+              curve: AppMotion.easeOut,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected
@@ -177,6 +179,15 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
                       ? AppColors.brandPrimary
                       : AppColors.cardBorder,
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.brandPrimary.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Center(
                 child: Text(
@@ -281,75 +292,87 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
             ),
           ),
 
-          // Expanded Content
-          if (isExpanded) ...[
-            const Divider(height: 1, color: AppColors.cardBorder),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Chapters & Weightage Breakdown',
-                    style: AppTypography.labelLarge.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: AppColors.secondarySurface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      syllabus.chaptersOverview,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppColors.inkPrimary,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+          // Expanded Content with AnimatedSize
+          AnimatedSize(
+            duration: AppMotion.durationStandard,
+            curve: AppMotion.easeOut,
+            alignment: Alignment.topCenter,
+            child: isExpanded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Divider(height: 1, color: AppColors.cardBorder),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chapters & Weightage Breakdown',
+                              style: AppTypography.labelLarge.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondarySurface,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                syllabus.chaptersOverview,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.inkPrimary,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
 
-                  // Open Official Syllabus PDF Button
-                  TactileFeedback(
-                    onTap: () => _openSyllabusPdf(syllabus),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandPrimaryLight,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.brandPrimary.withValues(alpha: 0.3),
+                            // Open Official Syllabus PDF Button
+                            TactileFeedback(
+                              onTap: () => _openSyllabusPdf(syllabus),
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandPrimaryLight,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.brandPrimary
+                                        .withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      LucideIcons.fileText,
+                                      size: 16,
+                                      color: AppColors.brandPrimary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Open Syllabus Document & Guidelines (PDF)',
+                                      style: AppTypography.labelMedium.copyWith(
+                                        color: AppColors.brandPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            LucideIcons.fileText,
-                            size: 16,
-                            color: AppColors.brandPrimary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Open Syllabus Document & Guidelines (PDF)',
-                            style: AppTypography.labelMedium.copyWith(
-                              color: AppColors.brandPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:school_manager/core/theme/app_colors.dart';
 import 'package:school_manager/core/theme/app_motion.dart';
+import 'package:school_manager/core/widgets/bento_card.dart';
 import 'package:school_manager/core/widgets/tactile_feedback.dart';
 
 void main() {
@@ -95,6 +97,74 @@ void main() {
 
       // When disableAnimations is true, duration should be Duration.zero
       expect(scaleWidget.duration, equals(Duration.zero));
+    });
+  });
+
+  group('BentoCard Tactile and Glass Audit', () {
+    testWidgets('BentoCard scales down to 0.97 on press when onTap is provided',
+        (tester) async {
+      bool tapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: BentoCard(
+                onTap: () => tapped = true,
+                child: const SizedBox(
+                  key: Key('bento-interactive'),
+                  width: 120,
+                  height: 80,
+                  child: Text('Interactive Bento'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final animatedScaleFinder = find.byType(AnimatedScale);
+      expect(animatedScaleFinder, findsOneWidget);
+      AnimatedScale scaleWidget = tester.widget(animatedScaleFinder);
+      expect(scaleWidget.scale, equals(1.0));
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('bento-interactive'))),
+      );
+      await tester.pump();
+
+      scaleWidget = tester.widget(animatedScaleFinder);
+      expect(scaleWidget.scale, equals(0.97));
+
+      await gesture.up();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      scaleWidget = tester.widget(animatedScaleFinder);
+      expect(scaleWidget.scale, equals(1.0));
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('BentoCard supports glass blur backdrop filter and subtle gradient',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: BentoCard(
+                isGlass: true,
+                glassBlur: 14.0,
+                gradient: AppColors.cardSubtleGradient,
+                child: Text('Glass Bento Card'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(BackdropFilter), findsOneWidget);
+      final backdrop = tester.widget<BackdropFilter>(find.byType(BackdropFilter));
+      expect(backdrop.filter, isNotNull);
     });
   });
 }

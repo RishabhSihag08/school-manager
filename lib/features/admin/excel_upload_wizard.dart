@@ -1628,17 +1628,74 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                         ? AppColors.brandPrimary
                         : AppColors.inkMuted.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: errors == 0
+                        ? [
+                            BoxShadow(
+                              color: AppColors.brandPrimary.withValues(alpha: 0.28),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Row(
                     children: [
                       const Icon(LucideIcons.send,
                           size: 16, color: Colors.white),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
-                        'Publish Results',
+                        'Publish Results (CBSE 8-Tier)',
                         style: AppTypography.button
                             .copyWith(color: Colors.white, fontSize: 13),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // CBSE 8-Tier Automatic Grading Reference Pill Strip
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.cardSurface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimaryLight,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'CBSE 8-TIER',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _cbseTierBadge('A1', '91-100%', const Color(0xFF059669)),
+                      _cbseTierBadge('A2', '81-90%', const Color(0xFF10B981)),
+                      _cbseTierBadge('B1', '71-80%', const Color(0xFF2563EB)),
+                      _cbseTierBadge('B2', '61-70%', const Color(0xFF4F46E5)),
+                      _cbseTierBadge('C1', '51-60%', const Color(0xFFD97706)),
+                      _cbseTierBadge('C2', '41-50%', const Color(0xFFF59E0B)),
+                      _cbseTierBadge('D', '33-40%', const Color(0xFF64748B)),
+                      _cbseTierBadge('E', '<33%', const Color(0xFFEF4444)),
                     ],
                   ),
                 ),
@@ -1920,12 +1977,19 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                   ),
                 ),
                 if (!isError && mark?.grade != null && mark!.grade != '-')
-                  Text(
-                    mark.grade,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.inkMuted,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: _getGradeTierColor(mark.grade).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      mark.grade,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: _getGradeTierColor(mark.grade),
+                      ),
                     ),
                   ),
                 if (isError)
@@ -1937,5 +2001,61 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
         ),
       ),
     );
+  }
+
+  Widget _cbseTierBadge(String grade, String range, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            grade,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            range,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 9,
+              color: AppColors.inkSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getGradeTierColor(String? grade) {
+    switch (grade?.toUpperCase()) {
+      case 'A1':
+        return const Color(0xFF059669);
+      case 'A2':
+        return const Color(0xFF10B981);
+      case 'B1':
+        return const Color(0xFF2563EB);
+      case 'B2':
+        return const Color(0xFF4F46E5);
+      case 'C1':
+        return const Color(0xFFD97706);
+      case 'C2':
+        return const Color(0xFFF59E0B);
+      case 'D':
+        return const Color(0xFF64748B);
+      case 'E':
+        return const Color(0xFFEF4444);
+      default:
+        return AppColors.inkMuted;
+    }
   }
 }

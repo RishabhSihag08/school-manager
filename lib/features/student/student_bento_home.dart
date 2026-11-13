@@ -733,21 +733,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.coralLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$streak-Day Streak 🔥',
-                  style: GoogleFonts.jetBrainsMono(
-                    color: AppColors.coralStreak,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              StreakFlamePopBadge(streak: streak),
             ],
           ),
           const SizedBox(height: 14),
@@ -767,16 +753,23 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
             style: AppTypography.bodySmall,
           ),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppColors.secondarySurface,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.brandPrimary,
-              ),
-              minHeight: 10,
-            ),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: progress),
+            duration: AppMotion.getDuration(context, const Duration(milliseconds: 650)),
+            curve: AppMotion.easeOut,
+            builder: (context, val, _) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: val,
+                  backgroundColor: AppColors.secondarySurface,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.brandPrimary,
+                  ),
+                  minHeight: 10,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -829,17 +822,66 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  '${_attendancePct.toStringAsFixed(1)}%',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.inkPrimary,
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    // Circular progress ring
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          TweenAnimationBuilder<double>(
+                            tween: Tween<double>(begin: 0.0, end: _attendancePct / 100),
+                            duration: AppMotion.getDuration(
+                              context,
+                              const Duration(milliseconds: 700),
+                            ),
+                            curve: AppMotion.easeOut,
+                            builder: (context, val, _) {
+                              return CircularProgressIndicator(
+                                value: val,
+                                strokeWidth: 4.5,
+                                strokeCap: StrokeCap.round,
+                                backgroundColor: AppColors.secondarySurface,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  _attendancePct >= 75 ? AppColors.success : AppColors.warning,
+                                ),
+                              );
+                            },
+                          ),
+                          Text(
+                            '${_attendancePct.toStringAsFixed(0)}%',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.inkPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_attendancePct.toStringAsFixed(1)}%',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.inkPrimary,
+                            ),
+                          ),
+                          Text('Attendance', style: AppTypography.titleSmall),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text('Attendance', style: AppTypography.titleSmall),
+                const SizedBox(height: 4),
                 Text('Tap for calendar', style: AppTypography.bodySmall),
               ],
             ),
@@ -892,17 +934,51 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      Text(
-                        '${_latestExamSummary!.percentage.toStringAsFixed(1)}%',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.inkPrimary,
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.brandPrimaryLight,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.brandPrimary.withValues(alpha: 0.25),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _latestExamSummary!.overallGrade,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.brandPrimary,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_latestExamSummary!.percentage.toStringAsFixed(1)}%',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.inkPrimary,
+                                  ),
+                                ),
+                                Text('Exam Hub', style: AppTypography.titleSmall),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text('Exam Hub', style: AppTypography.titleSmall),
+                      const SizedBox(height: 4),
                       Text(
                         _latestExamSummary!.examName,
                         style: AppTypography.bodySmall,
@@ -1024,13 +1100,25 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: AppColors.brandPrimary),
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: AppColors.brandPrimaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 14, color: AppColors.brandPrimary),
+          ),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: AppTypography.pillLabel.copyWith(
-              color: AppColors.inkPrimary,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.pillLabel.copyWith(
+                color: AppColors.inkPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -1051,22 +1139,36 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
             // Bouncy Tactile Checkbox
             TactileFeedback(
               onTap: () => _toggleHomework(hw),
-              child: AnimatedContainer(
+              child: AnimatedScale(
+                scale: hw.isCompleted ? 1.08 : 1.0,
                 duration: AppMotion.durationFast,
-                curve: AppMotion.easeOut,
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: hw.isCompleted ? AppColors.success : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: hw.isCompleted ? AppColors.success : AppColors.cardBorder,
-                    width: 2,
+                curve: Curves.elasticOut,
+                child: AnimatedContainer(
+                  duration: AppMotion.durationFast,
+                  curve: AppMotion.easeOut,
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: hw.isCompleted ? AppColors.success : AppColors.cardSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: hw.isCompleted ? AppColors.success : AppColors.cardBorder,
+                      width: 2,
+                    ),
+                    boxShadow: hw.isCompleted
+                        ? [
+                            BoxShadow(
+                              color: AppColors.success.withValues(alpha: 0.25),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
                   ),
+                  child: hw.isCompleted
+                      ? const Icon(LucideIcons.check, size: 18, color: Colors.white)
+                      : null,
                 ),
-                child: hw.isCompleted
-                    ? const Icon(LucideIcons.check, size: 18, color: Colors.white)
-                    : null,
               ),
             ),
             const SizedBox(width: 14),
@@ -1107,8 +1209,9 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    hw.title,
+                  AnimatedDefaultTextStyle(
+                    duration: AppMotion.durationFast,
+                    curve: AppMotion.easeOut,
                     style: AppTypography.titleMedium.copyWith(
                       decoration: hw.isCompleted
                           ? TextDecoration.lineThrough
@@ -1117,6 +1220,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                           ? AppColors.inkMuted
                           : AppColors.inkPrimary,
                     ),
+                    child: Text(hw.title),
                   ),
                   if (hw.description != null) ...[
                     const SizedBox(height: 4),
@@ -1131,6 +1235,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 6,
                       children: hw.attachments.map((att) {
                         return TactileFeedback(
                           onTap: () {
@@ -1138,12 +1243,13 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 10,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.secondarySurface,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.cardBorder),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1155,7 +1261,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                                   size: 13,
                                   color: AppColors.brandPrimary,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 5),
                                 Text(
                                   att.title,
                                   style: GoogleFonts.inter(
@@ -1176,6 +1282,95 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Streak Flame Pop Badge with Emil Kowalski-inspired pulsing micro-interaction.
+class StreakFlamePopBadge extends StatefulWidget {
+  final int streak;
+  const StreakFlamePopBadge({super.key, required this.streak});
+
+  @override
+  State<StreakFlamePopBadge> createState() => _StreakFlamePopBadgeState();
+}
+
+class _StreakFlamePopBadgeState extends State<StreakFlamePopBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.25)
+            .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.25, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 50,
+      ),
+    ]).animate(_controller);
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = AppMotion.shouldReduceMotion(context);
+    final scale = reduceMotion ? 1.0 : _scaleAnimation.value;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.coralLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.coralStreak.withValues(alpha: 0.3)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1AFF6B4A),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: scale,
+                child: const Text('🔥', style: TextStyle(fontSize: 13)),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${widget.streak}-Day Streak',
+            style: GoogleFonts.jetBrainsMono(
+              color: AppColors.coralStreak,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
