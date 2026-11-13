@@ -43,6 +43,23 @@ enum AnnouncementCategory {
         return 'General 📢';
     }
   }
+
+  String get toDbCategory {
+    switch (this) {
+      case AnnouncementCategory.holiday:
+        return 'holiday';
+      case AnnouncementCategory.exam:
+        return 'exam';
+      case AnnouncementCategory.event:
+        return 'event';
+      case AnnouncementCategory.urgent:
+        return 'urgent';
+      case AnnouncementCategory.classNotice:
+        return 'class_notice';
+      case AnnouncementCategory.general:
+        return 'general';
+    }
+  }
 }
 
 /// School-wide or Class Notice Announcement
@@ -57,7 +74,10 @@ class Announcement {
   final String? targetClassSectionId;
   final List<MediaAttachmentItem> attachments;
   final DateTime createdAt;
+  final DateTime? expiresAt;
+  final String? authorId;
   final String? authorName;
+  final String? authorRole; // 'admin' or 'teacher'
 
   const Announcement({
     required this.id,
@@ -70,8 +90,48 @@ class Announcement {
     this.targetClassSectionId,
     this.attachments = const [],
     required this.createdAt,
+    this.expiresAt,
+    this.authorId,
     this.authorName,
+    this.authorRole = 'admin',
   });
+
+  bool get isExpired =>
+      expiresAt != null && DateTime.now().isAfter(expiresAt!);
+
+  Announcement copyWith({
+    String? id,
+    String? title,
+    String? body,
+    AnnouncementCategory? category,
+    bool? isPinned,
+    DateTime? eventOrHolidayDate,
+    int? targetGrade,
+    String? targetClassSectionId,
+    List<MediaAttachmentItem>? attachments,
+    DateTime? createdAt,
+    DateTime? expiresAt,
+    String? authorId,
+    String? authorName,
+    String? authorRole,
+  }) {
+    return Announcement(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      category: category ?? this.category,
+      isPinned: isPinned ?? this.isPinned,
+      eventOrHolidayDate: eventOrHolidayDate ?? this.eventOrHolidayDate,
+      targetGrade: targetGrade ?? this.targetGrade,
+      targetClassSectionId: targetClassSectionId ?? this.targetClassSectionId,
+      attachments: attachments ?? this.attachments,
+      createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      authorId: authorId ?? this.authorId,
+      authorName: authorName ?? this.authorName,
+      authorRole: authorRole ?? this.authorRole,
+    );
+  }
 
   factory Announcement.fromJson(Map<String, dynamic> json) {
     var rawAttachments = json['attachments'];
@@ -97,7 +157,12 @@ class Announcement {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'] as String)
+          : null,
+      authorId: json['author_id'] as String? ?? json['created_by'] as String?,
       authorName: json['author_name'] as String?,
+      authorRole: json['author_role'] as String? ?? 'admin',
     );
   }
 
@@ -105,7 +170,7 @@ class Announcement {
         'id': id,
         'title': title,
         'body': body,
-        'category': category.name,
+        'category': category.toDbCategory,
         'is_pinned': isPinned,
         if (eventOrHolidayDate != null)
           'event_or_holiday_date': eventOrHolidayDate!.toIso8601String().split('T')[0],
@@ -113,6 +178,9 @@ class Announcement {
         if (targetClassSectionId != null) 'target_class_section_id': targetClassSectionId,
         'attachments': attachments.map((a) => a.toJson()).toList(),
         'created_at': createdAt.toIso8601String(),
+        if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
+        if (authorId != null) 'author_id': authorId,
         if (authorName != null) 'author_name': authorName,
+        'author_role': authorRole ?? 'admin',
       };
 }

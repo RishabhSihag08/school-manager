@@ -473,10 +473,12 @@ class MockSchoolRepository implements SchoolRepository {
       if (a.targetGrade != null && grade != null && a.targetGrade != grade) {
         return false;
       }
-      if (a.targetClassSectionId != null &&
-          classSectionId != null &&
-          a.targetClassSectionId != classSectionId) {
-        return false;
+      if (classSectionId != null) {
+        if (a.isExpired) return false;
+        if (a.targetClassSectionId != null &&
+            a.targetClassSectionId != classSectionId) {
+          return false;
+        }
       }
       return true;
     }).toList();
@@ -492,7 +494,7 @@ class MockSchoolRepository implements SchoolRepository {
       classSectionId: classSectionId,
     );
     for (final a in list) {
-      if (a.isPinned) return a;
+      if (a.isPinned && !a.isExpired) return a;
     }
     return null;
   }

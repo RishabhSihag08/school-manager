@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -247,13 +248,23 @@ class _UnifiedMediaViewerState extends State<UnifiedMediaViewer> {
 
   Widget _buildItemViewer(MediaAttachmentItem item) {
     if (item.type == 'image') {
+      ImageProvider provider;
+      if (item.url.startsWith('http')) {
+        provider = NetworkImage(item.url);
+      } else {
+        final localFile = File(item.url);
+        if (localFile.existsSync()) {
+          provider = FileImage(localFile);
+        } else {
+          provider = AssetImage(item.url);
+        }
+      }
+
       return Center(
         child: RotatedBox(
           quarterTurns: _rotationQuarterTurns,
           child: PhotoView(
-            imageProvider: item.url.startsWith('http')
-                ? NetworkImage(item.url) as ImageProvider
-                : AssetImage(item.url),
+            imageProvider: provider,
             minScale: PhotoViewComputedScale.contained,
             maxScale: PhotoViewComputedScale.covered * 3.0,
             backgroundDecoration: const BoxDecoration(
@@ -288,6 +299,11 @@ class _UnifiedMediaViewerState extends State<UnifiedMediaViewer> {
             final res = await http.get(Uri.parse(item.url));
             if (res.statusCode == 200) {
               return res.bodyBytes;
+            }
+          } else {
+            final localFile = File(item.url);
+            if (localFile.existsSync()) {
+              return await localFile.readAsBytes();
             }
           }
           // Return a placeholder demo PDF if network is offline

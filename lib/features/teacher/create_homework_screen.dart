@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,51 +134,187 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
     }
   }
 
-  void _addMediaAttachment(String type) {
+  Future<void> _addMediaAttachment(String type) async {
     HapticFeedback.lightImpact();
-    // Demo presets for rich multimedia homework
-    if (type == 'image') {
-      setState(() {
-        _attachments.add(
-          const MediaAttachmentItem(
-            title: 'Blackboard Notes (Ex 2.3).jpg',
-            url:
-                'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1000',
-            type: 'image',
-            sizeKb: 185,
-          ),
-        );
-      });
-    } else if (type == 'pdf') {
-      setState(() {
-        _attachments.add(
-          const MediaAttachmentItem(
-            title: 'Exercise Worksheet Unit 2.pdf',
-            url:
-                'https://raw.githubusercontent.com/RishabhSihag08/school-manager/main/assets/sample_worksheet.pdf',
-            type: 'pdf',
-            sizeKb: 240,
-          ),
-        );
-      });
-    } else if (type == 'video') {
-      setState(() {
-        _attachments.add(
-          const MediaAttachmentItem(
-            title: 'Concept Video: Unit Overview',
-            url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-            type: 'video',
-            sizeKb: 0,
-          ),
-        );
-      });
-    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Attached $type successfully!'),
-        duration: const Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
+    if (type == 'image') {
+      try {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: false,
+        );
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          final filePath = file.path ?? '';
+          final fileName = file.name;
+          final sizeKb = (file.size / 1024).round();
+
+          setState(() {
+            _attachments.add(
+              MediaAttachmentItem(
+                title: fileName,
+                url: filePath,
+                type: 'image',
+                sizeKb: sizeKb,
+              ),
+            );
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Attached photo: $fileName'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to pick photo: $e')),
+          );
+        }
+      }
+    } else if (type == 'pdf') {
+      try {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          allowMultiple: false,
+        );
+        if (result != null && result.files.isNotEmpty) {
+          final file = result.files.first;
+          final filePath = file.path ?? '';
+          final fileName = file.name;
+          final sizeKb = (file.size / 1024).round();
+
+          setState(() {
+            _attachments.add(
+              MediaAttachmentItem(
+                title: fileName,
+                url: filePath,
+                type: 'pdf',
+                sizeKb: sizeKb,
+              ),
+            );
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Attached PDF: $fileName'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to pick PDF: $e')),
+          );
+        }
+      }
+    } else if (type == 'video') {
+      _showVideoAttachmentDialog();
+    }
+  }
+
+  void _showVideoAttachmentDialog() {
+    final titleCtrl = TextEditingController(text: 'Concept Video Lesson');
+    final urlCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.video, color: AppColors.brandPrimary, size: 22),
+            SizedBox(width: 10),
+            Text('Attach Concept Video'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Video Title',
+                hintText: 'e.g. Chapter 4 Concept Video',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlCtrl,
+              decoration: const InputDecoration(
+                labelText: 'YouTube / Web Video URL',
+                hintText: 'https://www.youtube.com/watch?v=...',
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.video,
+                  allowMultiple: false,
+                );
+                if (result != null && result.files.isNotEmpty) {
+                  final file = result.files.first;
+                  urlCtrl.text = file.path ?? '';
+                  if (titleCtrl.text == 'Concept Video Lesson') {
+                    titleCtrl.text = file.name;
+                  }
+                }
+              },
+              icon: const Icon(LucideIcons.hardDrive, size: 16),
+              label: const Text('Or Pick Video File from Device'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final url = urlCtrl.text.trim();
+              if (url.isEmpty) return;
+              final title = titleCtrl.text.trim().isNotEmpty
+                  ? titleCtrl.text.trim()
+                  : 'Video Lesson';
+              setState(() {
+                _attachments.add(
+                  MediaAttachmentItem(
+                    title: title,
+                    url: url,
+                    type: 'video',
+                    sizeKb: 0,
+                  ),
+                );
+              });
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Attached video: $title'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandPrimary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Attach'),
+          ),
+        ],
       ),
     );
   }
@@ -502,15 +639,22 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                     const SizedBox(height: 10),
                     ...List.generate(_attachments.length, (idx) {
                       final item = _attachments[idx];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.canvasBackground,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.cardBorder),
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => UnifiedMediaViewer.show(
+                          context,
+                          items: _attachments,
+                          initialIndex: idx,
                         ),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.canvasBackground,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
                         child: Row(
                           children: [
                             Icon(
@@ -551,7 +695,8 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                             ),
                           ],
                         ),
-                      );
+                      ),
+                    );
                     }),
                   ],
                 ],

@@ -384,105 +384,241 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   void _openNoticeDialog({String? classId, String? className}) {
     final titleCtrl = TextEditingController();
     final bodyCtrl = TextEditingController();
-    final displayClass = className ?? 'Faculty';
+    final staff = ref.read(currentStaffProvider);
+    final teacherId = staff?['id'] as String? ?? '';
+    final teacherName = staff?['full_name'] as String? ?? 'Faculty';
+    final homeroomClassId = staff?['homeroom_class_id'] as String?;
+    final homeroomClassName =
+        staff?['homeroom_class_name'] as String? ?? 'Class in Charge';
+    final hasClassInCharge =
+        homeroomClassId != null && homeroomClassId.isNotEmpty;
+
+    // Scope selection: 'school', 'homeroom', 'teaching'
+    String selectedScope = classId != null
+        ? (classId == homeroomClassId ? 'homeroom' : 'teaching')
+        : 'school';
+    String? selectedTeachingClassId = classId != null && classId != homeroomClassId
+        ? classId
+        : (_subjectAllocations.isNotEmpty
+            ? (_subjectAllocations.first['class_section_id'] ??
+                    _subjectAllocations.first['class_id'])
+                as String?
+            : null);
+    int expiryDays = 0; // 0 = Never
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardSurface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Icon(LucideIcons.megaphone,
-                  color: AppColors.brandPrimary, size: 24),
-              const SizedBox(width: 10),
-              Text('Post $displayClass Notice', style: AppTypography.titleLarge),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'This announcement will be delivered instantly to $displayClass students and parents.',
-                style: AppTypography.bodySmall
-                    .copyWith(color: AppColors.inkSecondary),
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.cardSurface,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(LucideIcons.megaphone,
+                      color: AppColors.brandPrimary, size: 24),
+                  SizedBox(width: 10),
+                  Text('Post Announcement'),
+                ],
               ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: titleCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Notice Title',
-                  hintText: 'Enter notice title',
-                  filled: true,
-                  fillColor: AppColors.canvasBackground,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.cardBorder),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: bodyCtrl,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Notice Instructions',
-                  hintText: 'Details for students regarding materials...',
-                  filled: true,
-                  fillColor: AppColors.canvasBackground,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.cardBorder),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleCtrl.text.trim().isEmpty) return;
-                final repo = ref.read(schoolRepositoryProvider);
-                await repo.createAnnouncement(
-                  Announcement(
-                    id: 'ann-${DateTime.now().millisecondsSinceEpoch}',
-                    title: titleCtrl.text.trim(),
-                    body: bodyCtrl.text.trim(),
-                    category: AnnouncementCategory.classNotice,
-                    targetClassSectionId: classId,
-                    createdAt: DateTime.now(),
-                  ),
-                );
-                if (ctx.mounted) Navigator.pop(ctx);
-                final updated = await repo.getAnnouncements();
-                if (mounted) {
-                  setState(() => _announcements = updated);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('📢 Class notice posted successfully!'),
-                      backgroundColor: AppColors.success,
-                      behavior: SnackBarBehavior.floating,
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Target Scope Selector
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedScope,
+                      decoration: const InputDecoration(
+                        labelText: 'Announce To',
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'school',
+                          child: Text('Whole School (All Classes)'),
+                        ),
+                        if (hasClassInCharge)
+                          DropdownMenuItem(
+                            value: 'homeroom',
+                            child: Text('Class in Charge ($homeroomClassName)'),
+                          ),
+                        if (_subjectAllocations.isNotEmpty)
+                          const DropdownMenuItem(
+                            value: 'teaching',
+                            child: Text('Classes You Teach'),
+                          ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedScope = val);
+                        }
+                      },
                     ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandPrimary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                    if (selectedScope == 'teaching' &&
+                        _subjectAllocations.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedTeachingClassId,
+                        decoration: const InputDecoration(
+                          labelText: 'Select Teaching Class',
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                        ),
+                        items: _subjectAllocations.map((alloc) {
+                          final cId = (alloc['class_section_id'] ??
+                              alloc['class_id']) as String;
+                          final cName =
+                              alloc['class_name'] as String? ?? 'Class';
+                          final sName =
+                              alloc['subject_name'] as String? ?? 'Subject';
+                          return DropdownMenuItem(
+                            value: cId,
+                            child: Text('$cName • $sName'),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(
+                                () => selectedTeachingClassId = val);
+                          }
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    // Expiration Selector
+                    DropdownButtonFormField<int>(
+                      initialValue: expiryDays,
+                      decoration: const InputDecoration(
+                        labelText: 'Expires In',
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text('Never (No Expiry)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 1,
+                          child: Text('1 Day'),
+                        ),
+                        DropdownMenuItem(
+                          value: 2,
+                          child: Text('2 Days'),
+                        ),
+                        DropdownMenuItem(
+                          value: 3,
+                          child: Text('3 Days'),
+                        ),
+                        DropdownMenuItem(
+                          value: 7,
+                          child: Text('7 Days'),
+                        ),
+                        DropdownMenuItem(
+                          value: 14,
+                          child: Text('14 Days'),
+                        ),
+                        DropdownMenuItem(
+                          value: 30,
+                          child: Text('30 Days'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => expiryDays = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Announcement Title',
+                        hintText: 'e.g. Science Fair Submission Guidelines',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: bodyCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Announcement Details / Instructions',
+                        hintText: 'Details for students regarding materials...',
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text('Broadcast Notice'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (titleCtrl.text.trim().isEmpty) return;
+
+                    String? targetClassId;
+                    if (selectedScope == 'homeroom') {
+                      targetClassId = homeroomClassId;
+                    } else if (selectedScope == 'teaching') {
+                      targetClassId = selectedTeachingClassId;
+                    }
+
+                    final category = selectedScope == 'school'
+                        ? AnnouncementCategory.general
+                        : AnnouncementCategory.classNotice;
+
+                    final newAnn = Announcement(
+                      id: 'ann-${DateTime.now().millisecondsSinceEpoch}',
+                      title: titleCtrl.text.trim(),
+                      body: bodyCtrl.text.trim(),
+                      category: category,
+                      targetClassSectionId: targetClassId,
+                      createdAt: DateTime.now(),
+                      expiresAt: expiryDays > 0
+                          ? DateTime.now().add(Duration(days: expiryDays))
+                          : null,
+                      authorId: teacherId,
+                      authorName: teacherName,
+                      authorRole: 'teacher',
+                    );
+
+                    final repo = ref.read(schoolRepositoryProvider);
+                    await repo.createAnnouncement(newAnn);
+
+                    if (ctx.mounted) Navigator.pop(ctx);
+
+                    if (mounted) {
+                      setState(() {
+                        _announcements.removeWhere((item) => item.id == newAnn.id);
+                        _announcements.insert(0, newAnn);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('📢 Announcement posted successfully!'),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandPrimary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Broadcast Notice'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -1594,6 +1730,10 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
           ..._announcements.map((a) {
             final isHoliday = a.category == AnnouncementCategory.holiday;
             final isNotice = a.category == AnnouncementCategory.classNotice;
+            final isUrgent = a.category == AnnouncementCategory.urgent;
+            final isExpired = a.isExpired;
+            final isAdminNotice = a.authorRole == 'admin';
+            final canDelete = !isAdminNotice;
             final dateStr =
                 DateFormat('dd MMM yyyy, hh:mm a').format(a.createdAt);
 
@@ -1613,27 +1753,33 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isHoliday
-                                    ? const Color(0xFFFFEDD5)
-                                    : isNotice
-                                        ? const Color(0xFFE0E7FF)
-                                        : AppColors.brandPrimaryLight,
+                                color: isUrgent
+                                    ? const Color(0xFFFEE2E2)
+                                    : isHoliday
+                                        ? const Color(0xFFFFEDD5)
+                                        : isNotice
+                                            ? const Color(0xFFE0E7FF)
+                                            : AppColors.brandPrimaryLight,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                isHoliday
-                                    ? '🏖️ HOLIDAY CIRCULAR'
-                                    : isNotice
-                                        ? '📝 CLASS NOTICE'
-                                        : '📢 ${a.category.name.toUpperCase()}',
+                                isUrgent
+                                    ? '🚨 URGENT'
+                                    : isHoliday
+                                        ? '🏖️ HOLIDAY'
+                                        : isNotice
+                                            ? '📝 CLASS NOTICE'
+                                            : '📢 SCHOOL NOTICE',
                                 style: GoogleFonts.jetBrainsMono(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
-                                  color: isHoliday
-                                      ? AppColors.coralStreak
-                                      : isNotice
-                                          ? const Color(0xFF4338CA)
-                                          : AppColors.brandPrimary,
+                                  color: isUrgent
+                                      ? AppColors.danger
+                                      : isHoliday
+                                          ? AppColors.coralStreak
+                                          : isNotice
+                                              ? const Color(0xFF4338CA)
+                                              : AppColors.brandPrimary,
                                 ),
                               ),
                             ),
@@ -1649,11 +1795,31 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                                       Border.all(color: AppColors.cardBorder),
                                 ),
                                 child: Text(
-                                  a.targetClassSectionId!,
+                                  'Class Target',
                                   style: AppTypography.monospace(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.inkSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            if (isExpired) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                                ),
+                                child: Text(
+                                  'EXPIRED',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.danger,
                                   ),
                                 ),
                               ),
@@ -1678,73 +1844,99 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                                   ],
                                 ),
                               ),
-                            IconButton(
-                              icon: const Icon(LucideIcons.trash2,
-                                  size: 16, color: AppColors.danger),
-                              tooltip: 'Delete Circular',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    backgroundColor: AppColors.cardSurface,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
-                                    title: Row(
-                                      children: [
-                                        const Icon(LucideIcons.trash2,
-                                            color: AppColors.danger, size: 20),
-                                        const SizedBox(width: 8),
-                                        Text('Delete Circular',
-                                            style: AppTypography.titleMedium),
+                            if (canDelete)
+                              IconButton(
+                                icon: const Icon(LucideIcons.trash2,
+                                    size: 16, color: AppColors.danger),
+                                tooltip: 'Delete Circular',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () async {
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      backgroundColor: AppColors.cardSurface,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(16)),
+                                      title: Row(
+                                        children: [
+                                          const Icon(LucideIcons.trash2,
+                                              color: AppColors.danger, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text('Delete Circular',
+                                              style: AppTypography.titleMedium),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        'Are you sure you want to delete "${a.title}"?',
+                                        style: const TextStyle(
+                                            color: AppColors.inkPrimary),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.danger,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Delete'),
+                                        ),
                                       ],
                                     ),
-                                    content: Text(
-                                      'Are you sure you want to delete "${a.title}"?',
-                                      style: const TextStyle(
-                                          color: AppColors.inkPrimary),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(ctx, false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () =>
-                                            Navigator.pop(ctx, true),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppColors.danger,
-                                          foregroundColor: Colors.white,
+                                  );
+                                  if (confirmed == true && mounted) {
+                                    await ref
+                                        .read(schoolRepositoryProvider)
+                                        .deleteAnnouncement(a.id);
+                                    setState(() {
+                                      _announcements
+                                          .removeWhere((item) => item.id == a.id);
+                                    });
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Announcement deleted successfully!'),
+                                          backgroundColor: AppColors.success,
+                                          behavior: SnackBarBehavior.floating,
                                         ),
-                                        child: const Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (confirmed == true && mounted) {
-                                  await ref
-                                      .read(schoolRepositoryProvider)
-                                      .deleteAnnouncement(a.id);
-                                  setState(() {
-                                    _announcements
-                                        .removeWhere((item) => item.id == a.id);
-                                  });
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Announcement deleted successfully!'),
-                                        backgroundColor: AppColors.success,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
+                                      );
+                                    }
                                   }
-                                }
-                              },
-                            ),
+                                },
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.canvasBackground,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(LucideIcons.shieldCheck,
+                                        size: 11, color: AppColors.inkMuted),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Admin Notice',
+                                      style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 9.5,
+                                        color: AppColors.inkMuted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ],
@@ -1755,11 +1947,53 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                     Text(a.body,
                         style: AppTypography.bodySmall
                             .copyWith(color: AppColors.inkSecondary)),
-                    const SizedBox(height: 8),
-                    Text(
-                      dateStr,
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.inkMuted),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.clock,
+                            size: 12.5, color: AppColors.inkMuted),
+                        const SizedBox(width: 5),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            color: AppColors.inkMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (a.authorName != null) ...[
+                          const SizedBox(width: 10),
+                          Text(
+                            '•  ${a.authorName}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              color: AppColors.inkSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        if (a.expiresAt != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(LucideIcons.timer,
+                              size: 12.5,
+                              color: isExpired
+                                  ? AppColors.danger
+                                  : AppColors.inkMuted),
+                          const SizedBox(width: 5),
+                          Text(
+                            isExpired
+                                ? 'Expired'
+                                : 'Expires: ${DateFormat("dd MMM, hh:mm a").format(a.expiresAt!)}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              color: isExpired
+                                  ? AppColors.danger
+                                  : AppColors.inkMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),

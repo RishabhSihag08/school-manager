@@ -105,21 +105,47 @@ void main() {
       expect(allocations.first['subject_name'], 'Physics');
     });
 
-    test('Announcement creation and deletion', () async {
-      final ann = Announcement(
-        id: 'test-ann-1',
-        title: 'Sports Day Notice',
-        body: 'Sports day will be held on Friday.',
-        category: AnnouncementCategory.classNotice,
+    test('Announcement creation, expiration, and role filtering (v1.0.8)', () async {
+      final activeAnn = Announcement(
+        id: 'test-ann-active',
+        title: 'Active Notice',
+        body: 'Active notice for all.',
+        category: AnnouncementCategory.general,
         createdAt: DateTime.now(),
+        expiresAt: DateTime.now().add(const Duration(days: 2)),
+        authorRole: 'admin',
       );
-      await mockRepo.createAnnouncement(ann);
-      var list = await mockRepo.getAnnouncements();
-      expect(list.any((a) => a.id == 'test-ann-1'), isTrue);
+      final expiredAnn = Announcement(
+        id: 'test-ann-expired',
+        title: 'Expired Notice',
+        body: 'Holiday yesterday.',
+        category: AnnouncementCategory.holiday,
+        createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+        authorRole: 'teacher',
+      );
 
-      await mockRepo.deleteAnnouncement('test-ann-1');
-      list = await mockRepo.getAnnouncements();
-      expect(list.any((a) => a.id == 'test-ann-1'), isFalse);
+      expect(activeAnn.isExpired, isFalse);
+      expect(expiredAnn.isExpired, isTrue);
+      expect(activeAnn.category.toDbCategory, 'general');
+      expect(AnnouncementCategory.classNotice.toDbCategory, 'class_notice');
+
+      await mockRepo.createAnnouncement(activeAnn);
+      await mockRepo.createAnnouncement(expiredAnn);
+
+      // Staff (admin/teacher) see both active and expired
+      final staffList = await mockRepo.getAnnouncements();
+      expect(staffList.any((a) => a.id == 'test-ann-active'), isTrue);
+      expect(staffList.any((a) => a.id == 'test-ann-expired'), isTrue);
+
+      // Students (with classSectionId passed) only see unexpired announcements
+      final studentList = await mockRepo.getAnnouncements(classSectionId: 'class-8b');
+      expect(studentList.any((a) => a.id == 'test-ann-active'), isTrue);
+      expect(studentList.any((a) => a.id == 'test-ann-expired'), isFalse);
+
+      // Clean up
+      await mockRepo.deleteAnnouncement('test-ann-active');
+      await mockRepo.deleteAnnouncement('test-ann-expired');
     });
 
     test('Attendance recording and percentage calculation', () async {

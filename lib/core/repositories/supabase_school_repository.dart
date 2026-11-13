@@ -970,7 +970,12 @@ class SupabaseSchoolRepository implements SchoolRepository {
         }
 
         final List<dynamic> res = await query.order('created_at', ascending: false);
-        return res.map((j) => Announcement.fromJson(j as Map<String, dynamic>)).toList();
+        final list = res.map((j) => Announcement.fromJson(j as Map<String, dynamic>)).toList();
+        if (classSectionId != null) {
+          // For students / parents, filter out expired circulars
+          return list.where((a) => !a.isExpired).toList();
+        }
+        return list;
       } catch (e) {
         debugPrint('getAnnouncements error: $e');
       }
@@ -985,7 +990,7 @@ class SupabaseSchoolRepository implements SchoolRepository {
   }) async {
     final announcements = await getAnnouncements(grade: grade, classSectionId: classSectionId);
     for (final a in announcements) {
-      if (a.isPinned) return a;
+      if (a.isPinned && !a.isExpired) return a;
     }
     return null;
   }
@@ -999,7 +1004,7 @@ class SupabaseSchoolRepository implements SchoolRepository {
           'id': announcement.id.length >= 32 ? announcement.id : _uuid.v4(),
           'title': announcement.title,
           'body': announcement.body,
-          'category': announcement.category.name,
+          'category': announcement.category.toDbCategory,
           'is_pinned': announcement.isPinned,
           if (announcement.eventOrHolidayDate != null)
             'event_or_holiday_date': announcement.eventOrHolidayDate!.toIso8601String().split('T')[0],
@@ -1008,6 +1013,11 @@ class SupabaseSchoolRepository implements SchoolRepository {
             'target_class_section_id': announcement.targetClassSectionId,
           'attachments': announcement.attachments.map((a) => a.toJson()).toList(),
           'created_at': announcement.createdAt.toIso8601String(),
+          if (announcement.expiresAt != null)
+            'expires_at': announcement.expiresAt!.toIso8601String(),
+          if (announcement.authorId != null) 'author_id': announcement.authorId,
+          if (announcement.authorName != null) 'author_name': announcement.authorName,
+          'author_role': announcement.authorRole ?? 'admin',
         };
 
         await client.from('announcements').insert(payload);

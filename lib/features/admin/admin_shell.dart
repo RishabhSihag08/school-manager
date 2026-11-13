@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -2463,6 +2464,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         else
           ..._announcements.map((a) {
             final isHoliday = a.category == AnnouncementCategory.holiday;
+            final isNotice = a.category == AnnouncementCategory.classNotice;
+            final isUrgent = a.category == AnnouncementCategory.urgent;
+            final isExpired = a.isExpired;
+            final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(a.createdAt);
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: BentoCard(
@@ -2473,27 +2479,63 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isHoliday
-                                ? const Color(0xFFFFEDD5)
-                                : AppColors.brandPrimaryLight,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            isHoliday
-                                ? '🏖️ HOLIDAY CIRCULAR'
-                                : '📢 ${a.category.name.toUpperCase()}',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                              color: isHoliday
-                                  ? AppColors.coralStreak
-                                  : AppColors.brandPrimary,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isUrgent
+                                    ? const Color(0xFFFEE2E2)
+                                    : isHoliday
+                                        ? const Color(0xFFFFEDD5)
+                                        : isNotice
+                                            ? const Color(0xFFE0E7FF)
+                                            : AppColors.brandPrimaryLight,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isUrgent
+                                    ? '🚨 URGENT'
+                                    : isHoliday
+                                        ? '🏖️ HOLIDAY'
+                                        : isNotice
+                                            ? '📝 CLASS NOTICE'
+                                            : '📢 SCHOOL NOTICE',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isUrgent
+                                      ? AppColors.danger
+                                      : isHoliday
+                                          ? AppColors.coralStreak
+                                          : isNotice
+                                              ? const Color(0xFF4338CA)
+                                              : AppColors.brandPrimary,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (isExpired) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                                ),
+                                child: Text(
+                                  'EXPIRED',
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.danger,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -2524,9 +2566,49 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                     const SizedBox(height: 10),
                     Text(a.title, style: AppTypography.titleMedium),
                     const SizedBox(height: 4),
-                    Text(a.body,
-                        style: AppTypography.bodySmall
-                            .copyWith(color: AppColors.inkSecondary)),
+                    Text(
+                      a.body,
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.inkSecondary),
+                    ),
+                    const SizedBox(height: 10),
+                    // Publication Date, Time & Expiry
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.clock,
+                            size: 12.5, color: AppColors.inkMuted),
+                        const SizedBox(width: 5),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            color: AppColors.inkMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (a.expiresAt != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(LucideIcons.timer,
+                              size: 12.5,
+                              color: isExpired
+                                  ? AppColors.danger
+                                  : AppColors.inkMuted),
+                          const SizedBox(width: 5),
+                          Text(
+                            isExpired
+                                ? 'Expired on ${DateFormat("dd MMM, hh:mm a").format(a.expiresAt!)}'
+                                : 'Expires: ${DateFormat("dd MMM, hh:mm a").format(a.expiresAt!)}',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              color: isExpired
+                                  ? AppColors.danger
+                                  : AppColors.inkMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -2609,7 +2691,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final titleCtrl = TextEditingController();
     final bodyCtrl = TextEditingController();
     bool isPinned = true;
-    AnnouncementCategory category = AnnouncementCategory.holiday;
+    AnnouncementCategory category = AnnouncementCategory.general;
+    int expiryDays = 0; // 0 = Never
+    String selectedTargetClassId = 'all';
 
     showDialog(
       context: context,
@@ -2622,36 +2706,152 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                   borderRadius: BorderRadius.circular(16)),
               title: Text('Post School Circular',
                   style: AppTypography.titleMedium),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Circular Title',
-                      hintText: 'Enter circular title',
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Circular Title',
+                        hintText: 'e.g. Annual Sports Meet 2026',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: bodyCtrl,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Circular Details / Instructions',
-                      hintText: 'School will remain closed on...',
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: bodyCtrl,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Circular Details / Instructions',
+                        hintText: 'Enter details, guidelines, or schedule...',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    value: isPinned,
-                    onChanged: (val) =>
-                        setDialogState(() => isPinned = val ?? false),
-                    title:
-                        const Text('Pin as Top Hero Banner for all students'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ],
+                    const SizedBox(height: 14),
+                    // Notice Category & Expiration
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<AnnouncementCategory>(
+                            initialValue: category,
+                            decoration: const InputDecoration(
+                              labelText: 'Category',
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: AnnouncementCategory.general,
+                                child: Text('General 📢'),
+                              ),
+                              DropdownMenuItem(
+                                value: AnnouncementCategory.holiday,
+                                child: Text('Holiday 🏖️'),
+                              ),
+                              DropdownMenuItem(
+                                value: AnnouncementCategory.exam,
+                                child: Text('Exam Alert 📝'),
+                              ),
+                              DropdownMenuItem(
+                                value: AnnouncementCategory.event,
+                                child: Text('Event 🎉'),
+                              ),
+                              DropdownMenuItem(
+                                value: AnnouncementCategory.urgent,
+                                child: Text('Urgent 🚨'),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => category = val);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            initialValue: expiryDays,
+                            decoration: const InputDecoration(
+                              labelText: 'Expires In',
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 0,
+                                child: Text('Never'),
+                              ),
+                              DropdownMenuItem(
+                                value: 1,
+                                child: Text('1 Day'),
+                              ),
+                              DropdownMenuItem(
+                                value: 2,
+                                child: Text('2 Days'),
+                              ),
+                              DropdownMenuItem(
+                                value: 3,
+                                child: Text('3 Days'),
+                              ),
+                              DropdownMenuItem(
+                                value: 7,
+                                child: Text('7 Days'),
+                              ),
+                              DropdownMenuItem(
+                                value: 14,
+                                child: Text('14 Days'),
+                              ),
+                              DropdownMenuItem(
+                                value: 30,
+                                child: Text('30 Days'),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => expiryDays = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Target Audience
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedTargetClassId,
+                      decoration: const InputDecoration(
+                        labelText: 'Target Audience',
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'all',
+                          child: Text('Whole School (All Classes)'),
+                        ),
+                        ..._classes.map((c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.displayName),
+                            )),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => selectedTargetClassId = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      value: isPinned,
+                      onChanged: (val) =>
+                          setDialogState(() => isPinned = val ?? false),
+                      title:
+                          const Text('Pin as Top Hero Banner for all students'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -2668,7 +2868,15 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                       body: bodyCtrl.text.trim(),
                       category: category,
                       isPinned: isPinned,
+                      targetClassSectionId: selectedTargetClassId == 'all'
+                          ? null
+                          : selectedTargetClassId,
                       createdAt: DateTime.now(),
+                      expiresAt: expiryDays > 0
+                          ? DateTime.now().add(Duration(days: expiryDays))
+                          : null,
+                      authorRole: 'admin',
+                      authorName: 'School Administration',
                     );
                     await repo.createAnnouncement(newAnn);
                     if (ctx.mounted) Navigator.pop(ctx);

@@ -1,3 +1,60 @@
+# School Manager v1.0.8 Release Notes 🚀
+
+**Release Date:** November 13, 2026  
+**Build:** `1.0.8+8`
+
+---
+
+## 🎯 What's New & Fixed in v1.0.8
+
+### 1. 🕒 Announcement Date & Timestamp Display (Admin Portal)
+- All announcements displayed in the Admin Portal now prominently feature their exact publication date and time formatted in standard Indian format (`dd MMM yyyy, hh:mm a`).
+- Added expiration countdown indicators (`Expires: dd MMM yyyy, hh:mm a` or a red `EXPIRED` badge).
+
+### 2. ⏳ Auto-Expiring Announcements
+- Added an **"Expires In"** dropdown menu during announcement creation across Admin and Faculty portals:
+  - Options: `Never (No Expiry)`, `1 Day`, `2 Days`, `3 Days`, `7 Days`, `14 Days`, and `30 Days`.
+  - Automatically calculates and stores `expires_at` timestamp.
+  - **Student Portal**: Automatically filters out expired announcements so students never see obsolete circulars.
+  - **Admin & Faculty Portals**: Staff can still see expired announcements with an `EXPIRED` status badge for administrative record keeping.
+
+### 3. 🎯 Multi-Scope Faculty Announcements
+- Teachers can now broadcast announcements with customizable scope:
+  - **Whole School (All Classes)**: Broadcasts to every student across the entire school.
+  - **Class in Charge (Homeroom)**: Target only the specific class the teacher is in charge of.
+  - **Classes You Teach**: Dynamic dropdown allowing the teacher to target any of their assigned subject classes.
+
+### 4. 🛡️ Role-Based Announcement Deletion Guard
+- Added permission guard: Faculty members are strictly prohibited from deleting Admin-issued circulars.
+- Admin circulars displayed in the Faculty Portal show an immutable `[Admin Notice]` pill instead of the delete trash action icon.
+- Teachers can still delete circulars published by themselves.
+
+### 5. 🏷️ Removed Forced "Holiday Circular" Category Tag
+- Fixed bug where every notice was forced into `[🏖️ HOLIDAY CIRCULAR]`.
+- Circulars now default to **General Notice** (`📢 SCHOOL NOTICE`), with full category selection:
+  - `General Notice 📢`, `Holiday 🏖️`, `Exam Alert 📝`, `Event 🎉`, and `Urgent 🚨`.
+  - Clean target badge display (`🌍 Whole School`, `🏫 Class in Charge`, or specific class name).
+
+### 6. 🔄 Faculty Announcement Supabase Persistence Fix
+- Resolved database rejection where camelCase Dart enum values (`classNotice`) conflicted with PostgreSQL snake_case enum values (`class_notice`).
+- Added `category.toDbCategory` converter for 100% reliable Supabase persistence and instant reactive UI reflection.
+
+### 7. 📎 Genuine Real Media Attachments for Homework
+- Purged dummy preset demo attachment options from the Homework Publisher.
+- Integrated genuine device file picking:
+  - **+ Photo**: Native device image picker via `FilePicker` (`FileType.image`).
+  - **+ PDF Doc**: Native document picker filtering for `.pdf` files (`FileType.custom`).
+  - **+ Video**: Interactive modal with options to enter a web/YouTube video URL or pick a video file directly from the device.
+- Attached media chips are interactive and can be tapped immediately to preview via the `UnifiedMediaViewer`.
+
+---
+
+## 🛠️ Verification
+- **`flutter analyze`**: 0 issues found across all files.
+- **`flutter test`**: 61/61 unit, widget, and service tests passing.
+
+---
+
 # School Manager v1.0.7 Release Notes 🚀
 
 **Release Date:** November 13, 2026  
