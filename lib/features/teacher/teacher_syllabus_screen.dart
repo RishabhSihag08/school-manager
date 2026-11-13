@@ -688,13 +688,15 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
                       '${widget.subjectName} (${widget.subjectCode})',
                       style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -758,8 +760,11 @@ class _TeacherSyllabusScreenState extends ConsumerState<TeacherSyllabusScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
             children: [
               Text('Syllabus Title & Term Assignment', style: AppTypography.labelLarge),
               Container(

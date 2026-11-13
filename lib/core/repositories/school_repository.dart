@@ -176,4 +176,22 @@ abstract class SchoolRepository {
   );
 
   Future<List<Map<String, dynamic>>> getAllSubjectAllocations();
+
+  Future<List<Teacher>> getAllTeachers();
+
+  Future<Teacher> updateTeacher({
+    required String teacherId,
+    required String fullName,
+    required String loginCode,
+    required String pin,
+    String? phone,
+    String? email,
+    String? homeroomClassId,
+    String? homeroomClassName,
+    String? subjectName,
+    String? subjectCode,
+    List<String>? teachingClassIds,
+  });
+
+  Future<void> deleteTeacher(String teacherId);
 }

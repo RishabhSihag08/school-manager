@@ -172,7 +172,7 @@ class MockSchoolRepository implements SchoolRepository {
     String? customName,
   }) async {
     final newClass = ClassSection(
-      id: 'class-${DateTime.now().millisecondsSinceEpoch}',
+      id: 'class-$grade${section.toLowerCase().trim()}-${DateTime.now().microsecondsSinceEpoch}',
       grade: grade,
       section: section.toUpperCase().trim(),
       classCode: classCode.toUpperCase().trim(),
@@ -569,7 +569,7 @@ class MockSchoolRepository implements SchoolRepository {
     List<String>? teachingClassIds,
   }) async {
     final cleanCode = loginCode.trim().toLowerCase();
-    final staffId = 'staff-${DateTime.now().millisecondsSinceEpoch}';
+    final staffId = 'staff-${DateTime.now().microsecondsSinceEpoch}';
     final cleanHomeroomId = (homeroomClassId != null && homeroomClassId.trim().isNotEmpty)
         ? homeroomClassId.trim()
         : null;
@@ -589,6 +589,17 @@ class MockSchoolRepository implements SchoolRepository {
       'pin': pin.trim(),
     };
     _staffList.add(newStaff);
+
+    if (cleanHomeroomId != null) {
+      for (int i = 0; i < _classes.length; i++) {
+        if (_classes[i].id == cleanHomeroomId) {
+          _classes[i] = _classes[i].copyWith(
+            classTeacherId: staffId,
+            classTeacherName: fullName.trim(),
+          );
+        }
+      }
+    }
 
     if (teachingClassIds != null && subjectName != null) {
       for (final cid in teachingClassIds) {
@@ -662,5 +673,113 @@ class MockSchoolRepository implements SchoolRepository {
       }
     }
     return list.map((a) => Map<String, dynamic>.from(a)).toList();
+  }
+
+  @override
+  Future<List<Teacher>> getAllTeachers() async {
+    final teachers = <Teacher>[];
+    for (final s in _staffList) {
+      if (s['role'] == 'teacher') {
+        final tid = s['id'] as String;
+        final teachingIds = _teacherAllocations
+            .where((a) => a['teacher_id'] == tid)
+            .map((a) => a['class_section_id'] as String)
+            .toSet()
+            .toList();
+        final map = Map<String, dynamic>.from(s);
+        map['teaching_class_ids'] = teachingIds;
+        teachers.add(Teacher.fromJson(map));
+      }
+    }
+    return teachers;
+  }
+
+  @override
+  Future<Teacher> updateTeacher({
+    required String teacherId,
+    required String fullName,
+    required String loginCode,
+    required String pin,
+    String? phone,
+    String? email,
+    String? homeroomClassId,
+    String? homeroomClassName,
+    String? subjectName,
+    String? subjectCode,
+    List<String>? teachingClassIds,
+  }) async {
+    final idx = _staffList.indexWhere((s) => s['id'] == teacherId);
+    if (idx == -1) {
+      throw Exception('Teacher not found with ID: $teacherId');
+    }
+
+    final cleanCode = loginCode.trim().toLowerCase();
+    final cleanHomeroomId = (homeroomClassId != null && homeroomClassId.trim().isNotEmpty)
+        ? homeroomClassId.trim()
+        : null;
+
+    final updated = Map<String, dynamic>.from(_staffList[idx]);
+    updated['full_name'] = fullName.trim();
+    updated['login_code'] = cleanCode;
+    updated['pin'] = pin.trim();
+    if (phone != null) updated['phone'] = phone.trim();
+    if (email != null) updated['email'] = email.trim();
+    updated['homeroom_class_id'] = cleanHomeroomId;
+    updated['homeroom_class_name'] = cleanHomeroomId != null ? homeroomClassName : null;
+    updated['homeroom_class_code'] = cleanHomeroomId != null
+        ? (_classes.cast<ClassSection?>().firstWhere((c) => c?.id == cleanHomeroomId, orElse: () => null)?.classCode ?? '')
+        : null;
+    if (subjectName != null) updated['subject_name'] = subjectName.trim();
+    if (subjectCode != null) updated['subject_code'] = subjectCode.trim();
+
+    _staffList[idx] = updated;
+
+    // Update class_sections homeroom assignment
+    for (int i = 0; i < _classes.length; i++) {
+      if (_classes[i].classTeacherId == teacherId && _classes[i].id != cleanHomeroomId) {
+        _classes[i] = _classes[i].copyWith(clearClassTeacher: true);
+      } else if (_classes[i].id == cleanHomeroomId) {
+        _classes[i] = _classes[i].copyWith(
+          classTeacherId: teacherId,
+          classTeacherName: fullName.trim(),
+        );
+      }
+    }
+
+    // Update subject allocations
+    if (teachingClassIds != null) {
+      _teacherAllocations.removeWhere((a) => a['teacher_id'] == teacherId);
+      final sub = subjectName ?? updated['subject_name'] as String? ?? 'General';
+      final scode = subjectCode ?? updated['subject_code'] as String? ?? 'GEN';
+      for (final cid in teachingClassIds) {
+        final cls = _classes.cast<ClassSection?>().firstWhere(
+          (c) => c?.id == cid,
+          orElse: () => null,
+        );
+        final clsName = cls != null ? 'Class ${cls.grade}-${cls.section}' : cid;
+        _teacherAllocations.add({
+          'teacher_id': teacherId,
+          'class_section_id': cid,
+          'class_name': clsName,
+          'subject_name': sub,
+          'subject_code': scode,
+          'is_homeroom': cid == cleanHomeroomId,
+        });
+      }
+      updated['teaching_class_ids'] = teachingClassIds;
+    }
+
+    return Teacher.fromJson(updated);
+  }
+
+  @override
+  Future<void> deleteTeacher(String teacherId) async {
+    _staffList.removeWhere((s) => s['id'] == teacherId);
+    _teacherAllocations.removeWhere((a) => a['teacher_id'] == teacherId);
+    for (int i = 0; i < _classes.length; i++) {
+      if (_classes[i].classTeacherId == teacherId) {
+        _classes[i] = _classes[i].copyWith(clearClassTeacher: true);
+      }
+    }
   }
 }

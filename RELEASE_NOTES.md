@@ -1,3 +1,49 @@
+# School Manager v1.0.11 Release Notes 🚀
+
+**Release Date:** November 13, 2026  
+**Build:** `1.0.11+11`
+
+---
+
+## 👩‍🏫 Admin Faculty & Teachers Management Console Release (v1.0.11)
+
+This release introduces comprehensive teacher and faculty administration directly within the School Manager Admin Console, empowering administrators to view, search, filter, register, completely edit, and safely delete teacher accounts with automatic relationship cleanup.
+
+### 1. 🗂️ Faculty & Teachers Directory Screen (`AdminTeachersScreen`)
+- **Dual-Mode Architecture**: Embedded directly into the desktop/web `AdminShell` left navigation drawer and available as an independent route (`/admin/teachers`).
+- **Live Faculty Statistics**: Real-time summary strip featuring Total Faculty count, Class In-Charge homeroom count, and Subject Specialists count.
+- **Search & Filter Engine**: Instant search across teacher names, login codes (`T-101`), phone numbers, subjects, and homeroom classes, paired with quick-filter chips (`All Teachers`, `Class In-Charge`, `Subject Specialists`).
+- **Tactile Teacher Bento Cards**:
+  - Teacher avatar with initials and active status badge.
+  - Monospace login code pill and Security PIN with tap-to-reveal toggle.
+  - Homeroom In-Charge amber badge linking directly to class sections.
+  - Primary Subject Specialization pill with icon and subject code.
+  - Teaching class allocation badges with multi-class chips.
+  - Fast tactile `Edit` button and red destructive `Delete` action.
+
+### 2. ✏️ Complete Teacher Profile Editing & Deletion
+- **Edit Everything Modal**:
+  - Full Name, Login Code, Security PIN, Phone Number, and Optional Email.
+  - Homeroom Class In-Charge assignment with automatic synchronization to `class_sections` (unassigning prior classes to prevent orphaned class teachers).
+  - Primary Subject Specialization with instant subject code binding.
+  - Teaching Class Allocations with multi-select class chips.
+- **Irreversible Account Deletion with Safeguards**:
+  - Destructive confirmation dialog detailing consequences before removal.
+  - Automatic cascade cleanup: removes teacher from all subject allocations and unassigns them from homeroom class sections (`classTeacherId: null`).
+  - Seamless fallback and zero orphaned records across database and memory states.
+
+### 3. ➕ Smart Teacher Registration
+- **Smart Code Suggestion**: Auto-increments next available faculty login code (e.g., `T-101`, `T-102`).
+- **One-Tap PIN Generator**: Generates random 4-digit security PIN for instant onboarding.
+- **Instant Allocation**: Assigns homeroom and subject teaching classes right at registration.
+
+### 4. 📐 Continuous Impeccable Layout Polish
+- Fixed horizontal wrapping in teacher syllabus header cards and title editor cards.
+- Enhanced `ClassSection.copyWith(clearClassTeacher: true)` ensuring reliable homeroom clearing.
+- Verified 69/69 automated test suites passing with 0 analyzer issues.
+
+---
+
 # School Manager v1.0.10 Release Notes 🚀
 
 **Release Date:** November 13, 2026  

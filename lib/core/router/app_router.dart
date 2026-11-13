@@ -17,6 +17,7 @@ import '../../features/teacher/mark_attendance_screen.dart';
 import '../../features/teacher/create_homework_screen.dart';
 import '../../features/teacher/teacher_syllabus_screen.dart';
 import '../../features/admin/admin_shell.dart';
+import '../../features/admin/admin_teachers_screen.dart';
 import '../../features/admin/excel_upload_wizard.dart';
 import '../providers/core_providers.dart';
 import '../theme/app_colors.dart';
@@ -41,6 +42,7 @@ class AppRoutes {
   static const String teacherSyllabus = '/teacher/syllabus';
 
   static const String adminDashboard = '/admin';
+  static const String adminTeachers = '/admin/teachers';
   static const String adminExcelWizard = '/admin/excel-wizard';
 
   static const String settings = '/settings';
@@ -220,6 +222,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.adminDashboard,
         name: 'adminDashboard',
         builder: (context, state) => const AdminShell(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminTeachers,
+        name: 'adminTeachers',
+        builder: (context, state) => const AdminTeachersScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminExcelWizard,

@@ -1350,6 +1350,239 @@ class SupabaseSchoolRepository implements SchoolRepository {
     return _fallback.getAllSubjectAllocations();
   }
 
+  @override
+  Future<List<Teacher>> getAllTeachers() async {
+    final client = _client;
+    if (client != null) {
+      try {
+        final res = await client
+            .from('profiles')
+            .select()
+            .eq('role', 'teacher')
+            .order('full_name');
+
+        if (res.isNotEmpty) {
+          final teachers = <Teacher>[];
+          for (final item in res) {
+            final id = item['id'] as String;
+            String? homeroomClassId;
+            String? homeroomClassName;
+            String? subjectName;
+            String? subjectCode;
+            final teachingClassIds = <String>[];
+
+            try {
+              final classRes = await client
+                  .from('class_sections')
+                  .select('id, grade, section')
+                  .eq('class_teacher_id', id)
+                  .maybeSingle();
+              if (classRes != null) {
+                homeroomClassId = classRes['id'] as String;
+                homeroomClassName = 'Class ${classRes['grade']}-${classRes['section']}';
+              }
+            } catch (_) {}
+
+            try {
+              final allocRes = await client
+                  .from('subject_allocations')
+                  .select('class_section_id, subjects(name, code)')
+                  .eq('teacher_id', id);
+              if (allocRes.isNotEmpty) {
+                for (final a in allocRes) {
+                  final cid = a['class_section_id'] as String?;
+                  if (cid != null && !teachingClassIds.contains(cid)) {
+                    teachingClassIds.add(cid);
+                  }
+                  if (subjectName == null && a['subjects'] is Map) {
+                    subjectName = a['subjects']['name'] as String?;
+                    subjectCode = a['subjects']['code'] as String?;
+                  }
+                }
+              }
+            } catch (_) {}
+
+            if (_staffSessionCache.containsKey(id)) {
+              final cached = _staffSessionCache[id]!;
+              subjectName ??= cached['subject_name'] as String?;
+              subjectCode ??= cached['subject_code'] as String?;
+              homeroomClassId ??= cached['homeroom_class_id'] as String?;
+              homeroomClassName ??= cached['homeroom_class_name'] as String?;
+            }
+
+            final map = {
+              'id': id,
+              'full_name': item['full_name'] as String? ?? 'Teacher',
+              'login_code': item['login_code'] as String? ?? '',
+              'pin': item['pin_hash'] as String? ?? '1234',
+              'role': 'teacher',
+              'phone': item['phone'] as String? ?? '',
+              'email': item['email'] as String?,
+              'homeroom_class_id': homeroomClassId,
+              'homeroom_class_name': homeroomClassName,
+              'subject_name': subjectName ?? 'General',
+              'subject_code': subjectCode ?? 'GEN',
+              'teaching_class_ids': teachingClassIds,
+              'created_at': item['created_at'],
+            };
+            teachers.add(Teacher.fromJson(map));
+          }
+          if (teachers.isNotEmpty) return teachers;
+        }
+      } catch (e) {
+        debugPrint('getAllTeachers error: $e');
+      }
+    }
+    return _fallback.getAllTeachers();
+  }
+
+  @override
+  Future<Teacher> updateTeacher({
+    required String teacherId,
+    required String fullName,
+    required String loginCode,
+    required String pin,
+    String? phone,
+    String? email,
+    String? homeroomClassId,
+    String? homeroomClassName,
+    String? subjectName,
+    String? subjectCode,
+    List<String>? teachingClassIds,
+  }) async {
+    final client = _client;
+    final cleanCode = loginCode.trim().toLowerCase();
+    final cleanHomeroomId = (homeroomClassId != null && homeroomClassId.trim().isNotEmpty)
+        ? homeroomClassId.trim()
+        : null;
+
+    if (client != null) {
+      try {
+        final payload = {
+          'full_name': fullName.trim(),
+          'login_code': cleanCode,
+          'pin_hash': pin.trim(),
+          if (phone != null) 'phone': phone.trim(),
+          if (email != null) 'email': email.trim(),
+        };
+
+        await client.from('profiles').update(payload).eq('id', teacherId);
+
+        // Update homeroom class assignment
+        if (cleanHomeroomId != null) {
+          await client
+              .from('class_sections')
+              .update({'class_teacher_id': null})
+              .eq('class_teacher_id', teacherId);
+
+          await client
+              .from('class_sections')
+              .update({'class_teacher_id': teacherId})
+              .eq('id', cleanHomeroomId);
+        } else {
+          await client
+              .from('class_sections')
+              .update({'class_teacher_id': null})
+              .eq('class_teacher_id', teacherId);
+        }
+
+        // Update subject allocations
+        if (teachingClassIds != null && subjectName != null) {
+          await client
+              .from('subject_allocations')
+              .delete()
+              .eq('teacher_id', teacherId);
+
+          String? subjectId;
+          try {
+            var subQuery = client.from('subjects').select('id');
+            if (subjectCode != null && subjectCode.trim().isNotEmpty) {
+              subQuery = subQuery.eq('code', subjectCode.trim());
+            } else {
+              subQuery = subQuery.ilike('name', subjectName.trim());
+            }
+            final subRes = await subQuery.maybeSingle();
+            if (subRes != null && subRes['id'] != null) {
+              subjectId = subRes['id'] as String;
+            } else {
+              final newSub = await client.from('subjects').insert({
+                'name': subjectName.trim(),
+                'code': (subjectCode != null && subjectCode.trim().isNotEmpty)
+                    ? subjectCode.trim()
+                    : subjectName.trim().substring(0, min(4, subjectName.trim().length)).toUpperCase(),
+              }).select('id').maybeSingle();
+              if (newSub != null && newSub['id'] != null) {
+                subjectId = newSub['id'] as String;
+              }
+            }
+          } catch (_) {}
+
+          if (subjectId != null) {
+            for (final cid in teachingClassIds) {
+              await client.from('subject_allocations').upsert({
+                'class_section_id': cid,
+                'subject_id': subjectId,
+                'teacher_id': teacherId,
+              }, onConflict: 'class_section_id, subject_id');
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('updateTeacher error: $e');
+      }
+    }
+
+    if (_staffSessionCache.containsKey(teacherId)) {
+      _staffSessionCache[teacherId] = {
+        ..._staffSessionCache[teacherId]!,
+        'full_name': fullName.trim(),
+        'login_code': cleanCode,
+        'pin': pin.trim(),
+        if (phone != null) 'phone': phone.trim(),
+        'homeroom_class_id': cleanHomeroomId,
+        'homeroom_class_name': homeroomClassName,
+        if (subjectName != null) 'subject_name': subjectName,
+        if (subjectCode != null) 'subject_code': subjectCode,
+      };
+    }
+
+    return _fallback.updateTeacher(
+      teacherId: teacherId,
+      fullName: fullName,
+      loginCode: loginCode,
+      pin: pin,
+      phone: phone,
+      email: email,
+      homeroomClassId: cleanHomeroomId,
+      homeroomClassName: homeroomClassName,
+      subjectName: subjectName,
+      subjectCode: subjectCode,
+      teachingClassIds: teachingClassIds,
+    );
+  }
+
+  @override
+  Future<void> deleteTeacher(String teacherId) async {
+    final client = _client;
+    if (client != null) {
+      try {
+        await client
+            .from('class_sections')
+            .update({'class_teacher_id': null})
+            .eq('class_teacher_id', teacherId);
+        await client
+            .from('subject_allocations')
+            .delete()
+            .eq('teacher_id', teacherId);
+        await client.from('profiles').delete().eq('id', teacherId);
+      } catch (e) {
+        debugPrint('deleteTeacher error: $e');
+      }
+    }
+    _staffSessionCache.remove(teacherId);
+    await _fallback.deleteTeacher(teacherId);
+  }
+
   // ==========================================
   // HELPER PARSING FUNCTIONS
   // ==========================================

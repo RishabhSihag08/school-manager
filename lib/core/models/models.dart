@@ -6,3 +6,4 @@ export 'timetable.dart';
 export 'syllabus.dart';
 export 'exam_result.dart';
 export 'announcement.dart';
+export 'teacher.dart';

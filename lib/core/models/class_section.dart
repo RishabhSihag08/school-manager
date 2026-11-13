@@ -47,13 +47,14 @@ class ClassSection {
     String? academicYear,
     String? timetableFileUrl,
     String? customName,
+    bool clearClassTeacher = false,
   }) {
     return ClassSection(
       id: id ?? this.id,
       grade: grade ?? this.grade,
       section: section ?? this.section,
-      classTeacherId: classTeacherId ?? this.classTeacherId,
-      classTeacherName: classTeacherName ?? this.classTeacherName,
+      classTeacherId: clearClassTeacher ? null : (classTeacherId ?? this.classTeacherId),
+      classTeacherName: clearClassTeacher ? null : (classTeacherName ?? this.classTeacherName),
       classCode: classCode ?? this.classCode,
       isCodeLocked: isCodeLocked ?? this.isCodeLocked,
       academicYear: academicYear ?? this.academicYear,

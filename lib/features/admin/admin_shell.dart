@@ -20,6 +20,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
 import '../../core/widgets/school_manager_logo.dart';
 import '../../core/widgets/tactile_feedback.dart';
+import 'admin_teachers_screen.dart';
 import 'excel_upload_wizard.dart';
 
 /// Responsive Desktop & Web Admin Shell with Sidebar Navigation:
@@ -44,6 +45,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
   final List<ClassSection> _classes = [];
   final List<Announcement> _announcements = [];
+  final List<Teacher> _teachers = [];
   final List<Student> _allStudents = [];
   final List<Map<String, dynamic>> _subjectAllocations = [];
 
@@ -71,6 +73,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final announcements = await repo.getAnnouncements();
     final allStudents = await repo.getAllStudents();
     final allocations = await repo.getAllSubjectAllocations();
+    final teachers = await repo.getAllTeachers();
 
     if (mounted) {
       setState(() {
@@ -78,6 +81,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         _classes.addAll(classes);
         _announcements.clear();
         _announcements.addAll(announcements);
+        _teachers.clear();
+        _teachers.addAll(teachers);
         _allStudents.clear();
         _allStudents.addAll(allStudents);
         _subjectAllocations.clear();
@@ -340,14 +345,16 @@ class _AdminShellState extends ConsumerState<AdminShell> {
             children: [
               _navItem(0, 'Classes & Sections', LucideIcons.layoutGrid,
                   badge: '${_classes.length}'),
-              _navItem(1, 'Student Directory', LucideIcons.users,
+              _navItem(1, 'Teachers Directory', LucideIcons.graduationCap,
+                  badge: '${_teachers.length}'),
+              _navItem(2, 'Student Directory', LucideIcons.users,
                   badge: '${_allStudents.length}'),
-              _navItem(2, 'Subject Matrix', LucideIcons.layers),
-              _navItem(3, 'Excel Marks Wizard', LucideIcons.fileSpreadsheet,
+              _navItem(3, 'Subject Matrix', LucideIcons.layers),
+              _navItem(4, 'Excel Marks Wizard', LucideIcons.fileSpreadsheet,
                   badge: 'Step 1-3'),
-              _navItem(4, 'Announcements Hub', LucideIcons.megaphone),
-              _navItem(5, 'Timetable Builder', LucideIcons.calendar),
-              _navItem(6, 'Settings & OTA Release', LucideIcons.sparkles),
+              _navItem(5, 'Announcements Hub', LucideIcons.megaphone),
+              _navItem(6, 'Timetable Builder', LucideIcons.calendar),
+              _navItem(7, 'Settings & OTA Release', LucideIcons.sparkles),
             ],
           ),
         ),
@@ -547,16 +554,18 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       case 0:
         return _buildClassesAndSectionsView();
       case 1:
-        return _buildStudentDirectoryView();
+        return const AdminTeachersScreen(isEmbedded: true);
       case 2:
-        return _buildSubjectAllocationMatrixView();
+        return _buildStudentDirectoryView();
       case 3:
-        return const ExcelUploadWizard();
+        return _buildSubjectAllocationMatrixView();
       case 4:
-        return _buildAnnouncementsHubView();
+        return const ExcelUploadWizard();
       case 5:
-        return _buildTimetableBuilderView();
+        return _buildAnnouncementsHubView();
       case 6:
+        return _buildTimetableBuilderView();
+      case 7:
       default:
         return _buildSettingsAndOtaView();
     }
