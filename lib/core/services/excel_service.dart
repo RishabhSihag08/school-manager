@@ -151,6 +151,7 @@ class ExcelService {
     required List<Student> students,
     required List<Map<String, String>> subjects, // [{'code': 'MATH', 'name': 'Mathematics'}]
     double maxMarks = 100.0,
+    DateTime? declarationDate,
   }) {
     final excel = Excel.createExcel();
     // Default sheet is usually Sheet1, create our target sheet
@@ -173,6 +174,11 @@ class ExcelService {
         .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0))
         .value = TextCellValue(
             'NOTE: Enter numeric marks, "AB" for Absent, or "ML" for Medical Leave');
+    if (declarationDate != null) {
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0))
+          .value = TextCellValue('DECLARATION_DATE: ${declarationDate.toIso8601String().split('T').first}');
+    }
 
     // Row 2: Column Headers
     sheet

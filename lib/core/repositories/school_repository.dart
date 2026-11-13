@@ -45,6 +45,8 @@ abstract class SchoolRepository {
 
   Future<List<Student>> getStudentsForClass(String classSectionId);
 
+  Future<List<Student>> getAllStudents();
+
   Future<void> updateStudentRollNo(String studentId, int newRollNo);
 
   Future<void> setClassCodeLocked(String classSectionId, bool isLocked);
@@ -172,4 +174,6 @@ abstract class SchoolRepository {
   Future<List<Map<String, dynamic>>> getTeacherSubjectAllocations(
     String teacherId,
   );
+
+  Future<List<Map<String, dynamic>>> getAllSubjectAllocations();
 }

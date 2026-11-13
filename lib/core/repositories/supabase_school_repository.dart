@@ -263,9 +263,7 @@ class SupabaseSchoolRepository implements SchoolRepository {
             .order('grade', ascending: true)
             .order('section', ascending: true);
 
-        if (res.isNotEmpty) {
-          return res.map((j) => _parseClassSection(j)).toList();
-        }
+        return res.map((j) => _parseClassSection(j)).toList();
       } catch (e) {
         debugPrint('getAllClassSections error: $e');
       }
@@ -273,7 +271,6 @@ class SupabaseSchoolRepository implements SchoolRepository {
     return _fallback.getAllClassSections();
   }
 
-  @override
   @override
   Future<ClassSection> createClassSection({
     required int grade,
@@ -322,7 +319,7 @@ class SupabaseSchoolRepository implements SchoolRepository {
           classTeacherName: classTeacherName,
           classCode: res['class_code'] as String,
           isCodeLocked: res['is_code_locked'] as bool? ?? false,
-          academicYear: '2026-2027',
+          academicYear: AppConfig.currentAcademicYear,
           customName: customName,
         );
         await _fallback.createClassSection(
@@ -347,6 +344,24 @@ class SupabaseSchoolRepository implements SchoolRepository {
       classTeacherName: classTeacherName,
       customName: customName,
     );
+  }
+
+  @override
+  Future<List<Student>> getAllStudents() async {
+    final client = _client;
+    if (client != null) {
+      try {
+        final List<dynamic> res = await client
+            .from('students')
+            .select()
+            .order('roll_no', ascending: true);
+
+        return res.map((j) => Student.fromJson(j as Map<String, dynamic>)).toList();
+      } catch (e) {
+        debugPrint('getAllStudents error: $e');
+      }
+    }
+    return _fallback.getAllStudents();
   }
 
   @override
@@ -1281,20 +1296,48 @@ class SupabaseSchoolRepository implements SchoolRepository {
     if (_staffSessionCache.containsKey(teacherId)) {
       final staff = _staffSessionCache[teacherId]!;
       if (staff['subject_name'] != null) {
-        final classId = staff['homeroom_class_id'] ?? 'class-8b';
-        return [
-          {
-            'class_section_id': classId,
-            'class_name': staff['homeroom_class_name'] ?? 'Class Section',
-            'subject_name': staff['subject_name'],
-            'subject_code': staff['subject_code'] ?? 'SUB',
-            'is_homeroom': staff['homeroom_class_id'] != null,
-          }
-        ];
+        final classId = staff['homeroom_class_id'] as String?;
+        if (classId != null && classId.isNotEmpty) {
+          return [
+            {
+              'class_section_id': classId,
+              'class_name': staff['homeroom_class_name'] ?? 'Class Section',
+              'subject_name': staff['subject_name'],
+              'subject_code': staff['subject_code'] ?? 'SUB',
+              'is_homeroom': true,
+            }
+          ];
+        }
       }
     }
 
     return _fallback.getTeacherSubjectAllocations(teacherId);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAllSubjectAllocations() async {
+    final client = _client;
+    if (client != null) {
+      try {
+        final List<dynamic> res = await client
+            .from('subject_allocations')
+            .select('class_section_id, teacher_id, profiles:teacher_id(full_name), subjects:subject_id(name, code)');
+        return res.map((item) {
+          final prof = item['profiles'] as Map<String, dynamic>?;
+          final sub = item['subjects'] as Map<String, dynamic>?;
+          return {
+            'class_section_id': item['class_section_id'],
+            'teacher_id': item['teacher_id'],
+            'teacher_name': prof?['full_name'] ?? 'Teacher',
+            'subject_name': sub?['name'] ?? 'Subject',
+            'subject_code': sub?['code'] ?? 'SUB',
+          };
+        }).toList();
+      } catch (e) {
+        debugPrint('getAllSubjectAllocations error: $e');
+      }
+    }
+    return _fallback.getAllSubjectAllocations();
   }
 
   // ==========================================
@@ -1314,7 +1357,7 @@ class SupabaseSchoolRepository implements SchoolRepository {
       classTeacherName: teacherName ?? json['class_teacher_name'] as String?,
       classCode: json['class_code'] as String,
       isCodeLocked: json['is_code_locked'] as bool? ?? false,
-      academicYear: '2026-2027',
+      academicYear: AppConfig.currentAcademicYear,
       timetableFileUrl: json['timetable_file_url'] as String?,
     );
   }

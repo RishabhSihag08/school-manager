@@ -53,9 +53,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     final repo = ref.read(schoolRepositoryProvider);
 
     final staff = ref.read(currentStaffProvider);
-    final teacherId = staff?['id'] as String? ?? 'teacher-ramesh';
-    final teacherSubject = staff?['subject_name'] as String? ?? 'Mathematics';
-    final teacherSubjectCode = staff?['subject_code'] as String? ?? 'MATH';
+    final teacherId = staff?['id'] as String? ?? '';
+    final teacherSubject = staff?['subject_name'] as String? ?? 'General';
+    final teacherSubjectCode = staff?['subject_code'] as String? ?? 'GEN';
 
     final homeroomClassId = staff?['homeroom_class_id'] as String?;
     final hasClassInCharge =
@@ -119,36 +119,17 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             subCode == teacherSubjectCode.toUpperCase();
       }).toList();
 
-      if (filtered.isEmpty) {
+      if (filtered.isEmpty && hasClassInCharge && homeroomClassId != null) {
         filtered = [
-          if (hasClassInCharge)
-            {
-              'class_section_id': homeroomClassId,
-              'class_name':
-                  staff?['homeroom_class_name'] as String? ?? 'Class 8-B',
-              'subject_name': teacherSubject,
-              'subject_code': teacherSubjectCode,
-              'is_homeroom': true,
-              'student_count': _rosterStudentCount,
-              'schedule': 'Mon, Wed, Fri • P1 (08:00 AM)',
-            },
           {
-            'class_section_id': 'class-6a',
-            'class_name': 'Class 6-A',
+            'class_section_id': homeroomClassId,
+            'class_name':
+                staff?['homeroom_class_name'] as String? ?? 'Homeroom Class',
             'subject_name': teacherSubject,
             'subject_code': teacherSubjectCode,
-            'is_homeroom': false,
-            'student_count': 38,
-            'schedule': 'Tue, Thu, Sat • P2 (08:45 AM)',
-          },
-          {
-            'class_section_id': 'class-7c',
-            'class_name': 'Class 7-C',
-            'subject_name': teacherSubject,
-            'subject_code': teacherSubjectCode,
-            'is_homeroom': false,
-            'student_count': 40,
-            'schedule': 'Mon, Tue, Fri • P4 (10:15 AM)',
+            'is_homeroom': true,
+            'student_count': _rosterStudentCount,
+            'schedule': 'Weekly Homeroom Session',
           },
         ];
       }
@@ -510,9 +491,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   @override
   Widget build(BuildContext context) {
     final staff = ref.watch(currentStaffProvider);
-    final teacherName = staff?['full_name'] ?? 'Mr. Ramesh Sharma';
-    final teachingSubject = staff?['subject_name'] ?? 'Mathematics';
-    final homeroomName = staff?['homeroom_class_name'] as String? ?? 'Class 8-B';
+    final teacherName = staff?['full_name'] ?? 'Faculty';
+    final teachingSubject = staff?['subject_name'] ?? 'General';
+    final homeroomName = staff?['homeroom_class_name'] as String? ?? 'Homeroom';
     final homeroomClassId = staff?['homeroom_class_id'] as String?;
     final hasClassInCharge =
         staff?['homeroom_class_id'] != null &&
@@ -690,8 +671,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                       builder: (context) => TeacherSyllabusScreen(
                         classSectionId: alloc?['class_section_id'] as String? ??
                             alloc?['class_id'] as String? ??
-                            'class-8b',
-                        className: alloc?['class_name'] as String? ?? 'Class 8-B',
+                            (staff?['homeroom_class_id'] as String? ?? ''),
+                        className: alloc?['class_name'] as String? ??
+                            (staff?['homeroom_class_name'] as String? ?? 'Class'),
                         subjectName: alloc?['subject_name'] as String? ?? sub,
                         subjectCode: alloc?['subject_code'] as String? ?? code,
                       ),
@@ -1320,7 +1302,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
             final className = alloc['class_name'] as String? ?? 'Class';
             final classId = alloc['class_section_id'] as String? ??
                 alloc['class_id'] as String? ??
-                'class-8b';
+                '';
             final subjectName =
                 alloc['subject_name'] as String? ?? 'Mathematics';
             final subjectCode = alloc['subject_code'] as String? ?? 'MATH';

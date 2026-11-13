@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../config/app_config.dart';
 import '../models/models.dart';
 
 /// Service to generate official CBSE-compliant printable PDF report cards
@@ -17,8 +18,9 @@ class ReportCardPdfService {
     String schoolName = 'ANNUAL ACADEMIC PROGRESS REPORT',
     String schoolAffiliation = 'School Examination & Evaluation Record',
     String schoolAddress = 'Official Academic Record',
-    String academicSession = 'Academic Session: 2026-2027',
+    String? academicSession,
   }) async {
+    final sessionText = academicSession ?? 'Academic Session: ${AppConfig.currentAcademicYear}';
     final pdf = pw.Document();
 
     // Calculate totals
@@ -55,7 +57,7 @@ class ReportCardPdfService {
                   schoolName: schoolName,
                   schoolAffiliation: schoolAffiliation,
                   schoolAddress: schoolAddress,
-                  academicSession: academicSession,
+                  academicSession: sessionText,
                   examName: examName,
                 ),
 
@@ -98,7 +100,7 @@ class ReportCardPdfService {
                 // 6. Signatures and Official Stamp Blocks
                 _buildSignatureRow(
                   classTeacherName:
-                      classSection.classTeacherName ?? 'Mr. Ramesh Sharma',
+                      classSection.classTeacherName ?? 'Class Teacher',
                 ),
               ],
             ),
@@ -270,7 +272,7 @@ class ReportCardPdfService {
                 infoCell('Student Name', student.fullName),
                 infoCell('Roll Number', student.rollNo.toString()),
                 infoCell('Class & Section', classSection.displayName),
-                infoCell('Academic Session', '2026-2027'),
+                infoCell('Academic Session', classSection.academicYear.isNotEmpty ? classSection.academicYear : AppConfig.currentAcademicYear),
               ],
             ),
           ),
@@ -282,7 +284,7 @@ class ReportCardPdfService {
                 infoCell('Admission No', student.admissionNo ?? 'N/A'),
                 infoCell('Parent Name', student.parentName),
                 infoCell('Attendance', '${attendancePercentage.toStringAsFixed(1)}%'),
-                infoCell('Class Teacher', classSection.classTeacherName ?? 'Mr. Ramesh Sharma'),
+                infoCell('Class Teacher', classSection.classTeacherName ?? 'Class Teacher'),
               ],
             ),
           ),

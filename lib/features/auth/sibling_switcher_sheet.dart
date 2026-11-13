@@ -140,7 +140,7 @@ class SiblingSwitcherSheet extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Class 8-B • Roll #${sibling.rollNo} • Streak: ${sibling.homeworkStreak}🔥',
+                            'Roll #${sibling.rollNo} • Streak: ${sibling.homeworkStreak}🔥',
                             style: GoogleFonts.jetBrainsMono(
                               color: AppColors.inkSecondary,
                               fontSize: 12,

@@ -7,7 +7,12 @@ class AppConfig {
 
   static const String appName = 'School Manager';
   static const String appTagline = 'Modern School Management System';
-  static const String currentAcademicYear = '2026-2027';
+  static String get currentAcademicYear {
+    final now = DateTime.now();
+    return now.month >= 4
+        ? '${now.year}-${now.year + 1}'
+        : '${now.year - 1}-${now.year}';
+  }
 
   // Supabase Backend Credentials loaded from .env
   static String get supabaseUrl =>
@@ -31,8 +36,8 @@ class AppConfig {
   static const String githubRepo = 'school-manager';
   static const String otaChannel = 'github-releases';
 
-  static String _version = '1.0.6';
-  static int _buildNumber = 4;
+  static String _version = '1.0.7';
+  static int _buildNumber = 7;
 
   static String get currentVersion => _version;
   static int get currentBuildNumber => _buildNumber;

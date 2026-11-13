@@ -209,8 +209,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return TeacherSyllabusScreen(
-            classSectionId: extra['class_section_id'] as String? ?? 'class-8b',
-            className: extra['class_name'] as String? ?? 'Class 8-B',
+            classSectionId: extra['class_section_id'] as String? ?? '',
+            className: extra['class_name'] as String? ?? 'Class Section',
             subjectName: extra['subject_name'] as String? ?? 'Mathematics',
             subjectCode: extra['subject_code'] as String? ?? 'MATH',
           );

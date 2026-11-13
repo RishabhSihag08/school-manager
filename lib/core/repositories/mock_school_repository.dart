@@ -6,33 +6,8 @@ import 'school_repository.dart';
 /// Clean in-memory Mock Implementation of SchoolRepository.
 /// Stores records created at runtime with clean empty initial states.
 class MockSchoolRepository implements SchoolRepository {
-  // Class Sections
-  final List<ClassSection> _classes = [
-    const ClassSection(
-      id: 'class-8b',
-      grade: 8,
-      section: 'B',
-      classCode: '8B-K9X2',
-      isCodeLocked: false,
-      academicYear: '2026-2027',
-    ),
-    const ClassSection(
-      id: 'class-6a',
-      grade: 6,
-      section: 'A',
-      classCode: '6A-M4P1',
-      isCodeLocked: false,
-      academicYear: '2026-2027',
-    ),
-    const ClassSection(
-      id: 'class-7c',
-      grade: 7,
-      section: 'C',
-      classCode: '7C-Q8W9',
-      isCodeLocked: false,
-      academicYear: '2026-2027',
-    ),
-  ];
+  // Class Sections (Clean empty initial state - no dummy classes)
+  final List<ClassSection> _classes = [];
 
   // Clean empty state: No hardcoded dummy students
   final List<Student> _students = [];
@@ -205,10 +180,17 @@ class MockSchoolRepository implements SchoolRepository {
       classTeacherName: classTeacherName,
       customName: customName,
       isCodeLocked: false,
-      academicYear: '2026-2027',
+      academicYear: AppConfig.currentAcademicYear,
     );
     _classes.add(newClass);
     return newClass;
+  }
+
+  @override
+  Future<List<Student>> getAllStudents() async {
+    final list = List<Student>.from(_students);
+    list.sort((a, b) => a.rollNo.compareTo(b.rollNo));
+    return list;
   }
 
   @override
@@ -248,7 +230,7 @@ class MockSchoolRepository implements SchoolRepository {
       _classes[index] = c.copyWith(classCode: newCode);
       return newCode;
     }
-    return '8B-NEW1';
+    return 'CLS-NEW1';
   }
 
   @override
@@ -597,7 +579,9 @@ class MockSchoolRepository implements SchoolRepository {
       'phone': phone?.trim() ?? '',
       'homeroom_class_id': cleanHomeroomId,
       'homeroom_class_name': cleanHomeroomId != null ? homeroomClassName : null,
-      'homeroom_class_code': cleanHomeroomId != null ? '8B-K9X2' : null,
+      'homeroom_class_code': cleanHomeroomId != null
+          ? (_classes.cast<ClassSection?>().firstWhere((c) => c?.id == cleanHomeroomId, orElse: () => null)?.classCode ?? '')
+          : null,
       'subject_name': subjectName,
       'subject_code': subjectCode,
       'pin': pin.trim(),
@@ -638,12 +622,12 @@ class MockSchoolRepository implements SchoolRepository {
       orElse: () => <String, dynamic>{},
     );
     if (staff.isNotEmpty && staff['subject_name'] != null) {
-      final classId = staff['homeroom_class_id'] ?? (_classes.isNotEmpty ? _classes.first.id : 'class-8b');
+      final classId = staff['homeroom_class_id'] ?? (_classes.isNotEmpty ? _classes.first.id : '');
       final cls = _classes.cast<ClassSection?>().firstWhere(
         (c) => c?.id == classId,
         orElse: () => null,
       );
-      final className = staff['homeroom_class_name'] ?? (cls != null ? 'Class ${cls.grade}-${cls.section}' : 'Class 8-B');
+      final className = staff['homeroom_class_name'] ?? (cls != null ? 'Class ${cls.grade}-${cls.section}' : 'Class');
       return [
         {
           'class_section_id': classId,
@@ -655,5 +639,26 @@ class MockSchoolRepository implements SchoolRepository {
       ];
     }
     return [];
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAllSubjectAllocations() async {
+    final list = <Map<String, dynamic>>[];
+    list.addAll(_teacherAllocations);
+    for (final cls in _classes) {
+      if (cls.classTeacherName != null && cls.classTeacherName!.isNotEmpty) {
+        final alreadyHasHomeroom = list.any((a) =>
+            a['class_section_id'] == cls.id && a['is_homeroom'] == true);
+        if (!alreadyHasHomeroom) {
+          list.add({
+            'class_section_id': cls.id,
+            'class_name': cls.displayName,
+            'teacher_name': cls.classTeacherName,
+            'is_homeroom': true,
+          });
+        }
+      }
+    }
+    return list.map((a) => Map<String, dynamic>.from(a)).toList();
   }
 }

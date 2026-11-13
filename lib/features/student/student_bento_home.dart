@@ -498,7 +498,7 @@ class _StudentBentoHomeState extends ConsumerState<StudentBentoHome> {
                           ),
                         ),
                         Text(
-                          'Class 8-B • Roll #${student?.rollNo ?? 1}',
+                          '${_className ?? "Class"} • Roll #${student?.rollNo ?? 1}',
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 11,
                             color: AppColors.inkSecondary,

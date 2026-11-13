@@ -9,7 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../core/config/app_config.dart';
-import '../../core/models/exam_result.dart';
+import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
@@ -128,6 +128,13 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
 
   Future<void> _generateAndDownloadReportCard() async {
     final currentStudent = ref.read(currentStudentProvider);
+    final repo = ref.read(schoolRepositoryProvider);
+    ClassSection? classSection;
+    if (currentStudent?.classSectionId.isNotEmpty == true) {
+      try {
+        classSection = await repo.getClassSectionById(currentStudent!.classSectionId);
+      } catch (_) {}
+    }
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -216,7 +223,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                         pw.SizedBox(height: 4),
-                        pw.Text('Class & Section: Class 8-B'),
+                        pw.Text('Class & Section: ${classSection?.displayName ?? "Class"}'),
                         pw.SizedBox(height: 4),
                         pw.Text('Roll No: ${currentStudent?.rollNo ?? 1}'),
                       ],
@@ -228,7 +235,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                           'Admission No: ${currentStudent?.admissionNo ?? "ADM2026101"}',
                         ),
                         pw.SizedBox(height: 4),
-                        pw.Text('Class Teacher: Mr. Ramesh Sharma'),
+                        pw.Text('Class Teacher: ${classSection?.classTeacherName ?? "Class Teacher"}'),
                       ],
                     ),
                   ],
@@ -324,7 +331,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                           if (_summary!.rankInClass != null) ...[
                             pw.SizedBox(height: 4),
                             pw.Text(
-                              'Class Rank: #${_summary!.rankInClass} in Class 8-B',
+                              'Class Rank: #${_summary!.rankInClass}${classSection != null ? " in ${classSection.displayName}" : ""}',
                               style: const pw.TextStyle(fontSize: 10),
                             ),
                           ],
@@ -615,6 +622,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
   }
 
   Widget _buildSummaryBentoCard(ExamStudentSummary summary) {
+    final currentStudent = ref.watch(currentStudentProvider);
     final gradeColor = _getGradeColor(summary.overallGrade);
     final gradeBg = _getGradeBgColor(summary.overallGrade);
 
@@ -637,7 +645,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Class 8-B • Academic Year 2026–2027',
+                    '${currentStudent?.fullName != null ? "${currentStudent!.fullName} • " : ""}Academic Session ${AppConfig.currentAcademicYear}',
                     style: AppTypography.bodySmall,
                   ),
                 ],

@@ -16,13 +16,13 @@ import '../../core/widgets/tactile_feedback.dart';
 /// 1 tap toggles to Red Absent.
 /// Long-press toggles to Amber On Leave.
 class MarkAttendanceScreen extends ConsumerStatefulWidget {
-  final String classSectionId;
-  final String className;
+  final String? classSectionId;
+  final String? className;
 
   const MarkAttendanceScreen({
     super.key,
-    this.classSectionId = 'class-8b',
-    this.className = 'Class 8-B',
+    this.classSectionId,
+    this.className,
   });
 
   @override
@@ -37,6 +37,16 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   bool _isSubmitting = false;
   late final DateTime _attendanceDate;
 
+  String get _effectiveClassId {
+    final staff = ref.read(currentStaffProvider);
+    return widget.classSectionId ?? (staff?['homeroom_class_id'] as String?) ?? '';
+  }
+
+  String get _effectiveClassName {
+    final staff = ref.read(currentStaffProvider);
+    return widget.className ?? (staff?['homeroom_class_name'] as String?) ?? 'Class';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,11 +57,16 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
   Future<void> _loadStudents() async {
     setState(() => _isLoading = true);
     final repo = ref.read(schoolRepositoryProvider);
-    final students = await repo.getStudentsForClass(widget.classSectionId);
+    final classId = _effectiveClassId;
+    if (classId.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    final students = await repo.getStudentsForClass(classId);
 
     // Check if attendance already recorded for today
     final existing = await repo.getAttendanceForDate(
-      widget.classSectionId,
+      classId,
       _attendanceDate,
     );
     final existingMap = {for (final a in existing) a.studentId: a.status};
@@ -117,10 +132,10 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
 
     final repo = ref.read(schoolRepositoryProvider);
     final staff = ref.read(currentStaffProvider);
-    final teacherId = staff?['id'] as String? ?? 'teacher-ramesh';
+    final teacherId = staff?['id'] as String? ?? '';
 
     await repo.submitClassAttendance(
-      classSectionId: widget.classSectionId,
+      classSectionId: _effectiveClassId,
       date: _attendanceDate,
       attendanceMap: _attendanceState,
       markedBy: teacherId,
@@ -166,7 +181,7 @@ class _MarkAttendanceScreenState extends ConsumerState<MarkAttendanceScreen> {
           children: [
             Text('30-Second Roll Call', style: AppTypography.titleLarge),
             Text(
-              '${widget.className} • $dateStr',
+              '$_effectiveClassName • $dateStr',
               style:
                   AppTypography.caption.copyWith(color: AppColors.inkMuted),
             ),

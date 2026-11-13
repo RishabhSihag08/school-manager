@@ -564,7 +564,7 @@ class _JoinClassCodeScreenState extends ConsumerState<JoinClassCodeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Class Teacher: ${cls.classTeacherName ?? 'Mr. Ramesh Sharma'}',
+                  'Class Teacher: ${cls.classTeacherName?.isNotEmpty == true ? cls.classTeacherName! : 'Not Assigned'}',
                   style: AppTypography.bodySmall.copyWith(
                     color: const Color(0xFF047857),
                     fontWeight: FontWeight.w500,

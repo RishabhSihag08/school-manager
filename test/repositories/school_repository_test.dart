@@ -43,6 +43,12 @@ void main() {
     });
 
     test('Student registration and Admin student editing (Problem 8)', () async {
+      await mockRepo.createClassSection(
+        grade: 8,
+        section: 'B',
+        classCode: '8B-K9X2',
+      );
+
       final student = await mockRepo.registerStudentWithCode(
         classCode: '8B-K9X2',
         fullName: 'Real Student Name',
@@ -237,6 +243,12 @@ void main() {
 
     test('SupabaseSchoolRepository graceful fallback works without crashing', () async {
       // Supabase is uninitialized in unit test environment
+      await supabaseRepo.createClassSection(
+        grade: 8,
+        section: 'B',
+        classCode: '8B-K9X2',
+      );
+
       final classes = await supabaseRepo.getAllClassSections();
       expect(classes, isNotEmpty);
 
@@ -254,6 +266,30 @@ void main() {
       final found = await supabaseRepo.getStudentById(student.id);
       expect(found, isNotNull);
       expect(found!.fullName, 'Offline Test Student');
+    });
+
+    test('getAllStudents and getAllSubjectAllocations return active data', () async {
+      final cls = await mockRepo.createClassSection(
+        grade: 9,
+        section: 'A',
+        classCode: '9A-K1X1',
+        classTeacherName: 'Ms. Raman',
+      );
+      final student = await mockRepo.registerStudentWithCode(
+        classCode: '9A-K1X1',
+        fullName: 'Aarav Patel',
+        rollNo: 1,
+        parentName: 'Patel',
+        parentPhone: '+919876543210',
+        house: 'blue',
+        pin: '1234',
+      );
+
+      final students = await mockRepo.getAllStudents();
+      expect(students.any((s) => s.id == student.id), isTrue);
+
+      final allocations = await mockRepo.getAllSubjectAllocations();
+      expect(allocations.any((a) => a['class_section_id'] == cls.id), isTrue);
     });
   });
 }

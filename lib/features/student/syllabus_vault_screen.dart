@@ -43,7 +43,16 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
 
   Future<void> _loadSyllabi() async {
     final currentStudent = ref.read(currentStudentProvider);
-    final classId = currentStudent?.classSectionId ?? 'class-8b';
+    final classId = currentStudent?.classSectionId ?? '';
+    if (classId.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _syllabi = [];
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     final repo = ref.read(schoolRepositoryProvider);
     final list = await repo.getSyllabiForClass(
@@ -78,19 +87,14 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
   }
 
   void _openSyllabusPdf(Syllabus syllabus) {
-    final attachments = syllabus.attachments.isNotEmpty
-        ? syllabus.attachments
-        : [
-            MediaAttachmentItem(
-              title: '${syllabus.subjectName} Syllabus & Weightage.pdf',
-              url:
-                  'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-              type: 'pdf',
-              sizeKb: 280,
-            ),
-          ];
+    if (syllabus.attachments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No PDF document attached to this syllabus topic.')),
+      );
+      return;
+    }
 
-    UnifiedMediaViewer.show(context, items: attachments);
+    UnifiedMediaViewer.show(context, items: syllabus.attachments);
   }
 
   @override

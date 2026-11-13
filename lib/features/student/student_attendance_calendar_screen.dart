@@ -33,7 +33,7 @@ class _StudentAttendanceCalendarScreenState
     _loadAttendance();
   }
 
-  Future<void> _loadAttendance() async {
+  Future<void> _loadAttendance({int? month, int? year}) async {
     final currentStudent = ref.read(currentStudentProvider);
     if (currentStudent == null) {
       setState(() => _isLoading = false);
@@ -41,7 +41,11 @@ class _StudentAttendanceCalendarScreenState
     }
 
     final repo = ref.read(schoolRepositoryProvider);
-    final records = await repo.getAttendanceForStudent(currentStudent.id);
+    final records = await repo.getAttendanceForStudent(
+      currentStudent.id,
+      month: month ?? _focusedDay.month,
+      year: year ?? _focusedDay.year,
+    );
 
     if (!mounted) return;
     setState(() {
@@ -236,8 +240,8 @@ class _StudentAttendanceCalendarScreenState
     return BentoCard(
       padding: const EdgeInsets.all(14),
       child: TableCalendar(
-        firstDay: DateTime.utc(2026, 1, 1),
-        lastDay: DateTime.utc(2027, 12, 31),
+        firstDay: DateTime.utc(DateTime.now().year - 2, 1, 1),
+        lastDay: DateTime.utc(DateTime.now().year + 2, 12, 31),
         focusedDay: _focusedDay,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
         calendarFormat: CalendarFormat.month,
@@ -330,7 +334,10 @@ class _StudentAttendanceCalendarScreenState
           });
         },
         onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
+          setState(() {
+            _focusedDay = focusedDay;
+          });
+          _loadAttendance(month: focusedDay.month, year: focusedDay.year);
         },
       ),
     );
@@ -399,7 +406,7 @@ class _StudentAttendanceCalendarScreenState
                 if (record != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'Homeroom roll call by Mr. Ramesh Sharma',
+                    'Recorded during daily homeroom roll call',
                     style: AppTypography.bodySmall,
                   ),
                 ],

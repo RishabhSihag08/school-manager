@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:school_manager/core/models/student.dart';
 import 'package:school_manager/core/providers/core_providers.dart';
+import 'package:school_manager/core/repositories/mock_school_repository.dart';
 import 'package:school_manager/features/auth/join_class_code_screen.dart';
 import 'package:school_manager/features/auth/sibling_switcher_sheet.dart';
 import 'package:school_manager/features/auth/welcome_role_screen.dart';
@@ -46,9 +47,20 @@ void main() {
     testWidgets(
         'JoinClassCodeScreen renders ticket, verifies 8B-K9X2, with house shields removed',
         (tester) async {
+      final mockRepo = MockSchoolRepository();
+      await mockRepo.createClassSection(
+        grade: 8,
+        section: 'B',
+        classCode: '8B-K9X2',
+        classTeacherName: 'Dr. Radhakrishnan',
+      );
+
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(home: JoinClassCodeScreen()),
+        ProviderScope(
+          overrides: [
+            schoolRepositoryProvider.overrideWithValue(mockRepo),
+          ],
+          child: const MaterialApp(home: JoinClassCodeScreen()),
         ),
       );
       await tester.pumpAndSettle();
@@ -63,7 +75,7 @@ void main() {
 
       // Class 8-B verification banner should appear
       expect(find.textContaining('Found Class 8-B'), findsOneWidget);
-      expect(find.textContaining('Ramesh Sharma'), findsOneWidget);
+      expect(find.textContaining('Dr. Radhakrishnan'), findsOneWidget);
 
       // House shields should NOT be present
       expect(find.text('Select Student House'), findsNothing);

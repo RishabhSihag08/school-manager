@@ -35,49 +35,70 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
   final _descriptionController = TextEditingController();
 
   late DateTime _dueDate;
-  String _selectedClassId = 'class-8b';
-  String _selectedClassName = 'Class 8-B';
-  String _selectedSubjectCode = 'MATH';
-  String _selectedSubjectName = 'Mathematics';
+  String _selectedClassId = '';
+  String _selectedClassName = '';
+  String _selectedSubjectCode = 'GEN';
+  String _selectedSubjectName = 'General';
 
   final List<MediaAttachmentItem> _attachments = [];
   bool _isPublishing = false;
-
-  final List<Map<String, dynamic>> _assignedClasses = [
-    {
-      'class_id': 'class-8b',
-      'class_name': 'Class 8-B',
-      'subject_code': 'MATH',
-      'subject_name': 'Mathematics',
-    },
-    {
-      'class_id': 'class-6a',
-      'class_name': 'Class 6-A',
-      'subject_code': 'MATH',
-      'subject_name': 'Mathematics',
-    },
-    {
-      'class_id': 'class-7c',
-      'class_name': 'Class 7-C',
-      'subject_code': 'MATH',
-      'subject_name': 'Mathematics',
-    },
-  ];
+  List<Map<String, dynamic>> _assignedClasses = [];
 
   @override
   void initState() {
     super.initState();
     _dueDate = DateTime.now().add(const Duration(days: 1));
-    if (widget.initialClassId != null) {
-      _selectedClassId = widget.initialClassId!;
-      final match = _assignedClasses.firstWhere(
-        (c) => c['class_id'] == widget.initialClassId,
-        orElse: () => _assignedClasses.first,
-      );
-      _selectedClassName = match['class_name'] as String;
-      _selectedSubjectCode = match['subject_code'] as String;
-      _selectedSubjectName = match['subject_name'] as String;
+    _loadAssignedClasses();
+  }
+
+  Future<void> _loadAssignedClasses() async {
+    final staff = ref.read(currentStaffProvider);
+    final repo = ref.read(schoolRepositoryProvider);
+    final teacherId = staff?['id'] as String? ?? '';
+    final defaultSubject = staff?['subject_name'] as String? ?? 'General';
+    final defaultSubjectCode = staff?['subject_code'] as String? ?? 'GEN';
+
+    List<Map<String, dynamic>> classesList = [];
+    if (teacherId.isNotEmpty) {
+      try {
+        final allocs = await repo.getTeacherSubjectAllocations(teacherId);
+        classesList = allocs.map((a) => {
+          'class_id': a['class_section_id'] ?? a['class_id'] ?? '',
+          'class_name': a['class_name'] ?? 'Class',
+          'subject_code': a['subject_code'] ?? defaultSubjectCode,
+          'subject_name': a['subject_name'] ?? defaultSubject,
+        }).toList();
+      } catch (_) {}
     }
+
+    if (classesList.isEmpty) {
+      try {
+        final allSections = await repo.getAllClassSections();
+        classesList = allSections.map((c) => {
+          'class_id': c.id,
+          'class_name': c.displayName,
+          'subject_code': defaultSubjectCode,
+          'subject_name': defaultSubject,
+        }).toList();
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _assignedClasses = classesList;
+      if (_assignedClasses.isNotEmpty) {
+        final match = widget.initialClassId != null
+            ? _assignedClasses.firstWhere(
+                (c) => c['class_id'] == widget.initialClassId,
+                orElse: () => _assignedClasses.first,
+              )
+            : _assignedClasses.first;
+        _selectedClassId = match['class_id'] as String? ?? '';
+        _selectedClassName = match['class_name'] as String? ?? 'Class';
+        _selectedSubjectCode = match['subject_code'] as String? ?? defaultSubjectCode;
+        _selectedSubjectName = match['subject_name'] as String? ?? defaultSubject;
+      }
+    });
   }
 
   @override
@@ -133,7 +154,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
           const MediaAttachmentItem(
             title: 'Exercise Worksheet Unit 2.pdf',
             url:
-                'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                'https://raw.githubusercontent.com/RishabhSihag08/school-manager/main/assets/sample_worksheet.pdf',
             type: 'pdf',
             sizeKb: 240,
           ),
@@ -143,7 +164,7 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
       setState(() {
         _attachments.add(
           const MediaAttachmentItem(
-            title: 'NCERT Concept Video: Linear Equations',
+            title: 'Concept Video: Unit Overview',
             url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
             type: 'video',
             sizeKb: 0,
@@ -170,14 +191,20 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
 
   Future<void> _publishHomework() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedClassId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a target class first.')),
+      );
+      return;
+    }
 
     setState(() => _isPublishing = true);
     HapticFeedback.heavyImpact();
 
     final repo = ref.read(schoolRepositoryProvider);
     final staff = ref.read(currentStaffProvider);
-    final teacherId = staff?['id'] as String? ?? 'teacher-ramesh';
-    final teacherName = staff?['full_name'] as String? ?? 'Mr. Ramesh Sharma';
+    final teacherId = staff?['id'] as String? ?? '';
+    final teacherName = staff?['full_name'] as String? ?? 'Faculty';
 
     final newHomework = Homework(
       id: 'hw-${DateTime.now().millisecondsSinceEpoch}',
@@ -264,7 +291,9 @@ class _CreateHomeworkScreenState extends ConsumerState<CreateHomeworkScreen> {
                       style: AppTypography.titleSmall),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedClassId,
+                    initialValue: _assignedClasses.any((item) => item['class_id'] == _selectedClassId)
+                        ? _selectedClassId
+                        : (_assignedClasses.isNotEmpty ? _assignedClasses.first['class_id'] as String : null),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppColors.canvasBackground,

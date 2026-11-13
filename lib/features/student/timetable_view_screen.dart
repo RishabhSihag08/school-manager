@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,7 +36,12 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
   Future<void> _loadTimetable() async {
     final currentStudent = ref.read(currentStudentProvider);
     final classId =
-        widget.classSectionId ?? currentStudent?.classSectionId ?? 'class-8b';
+        widget.classSectionId ?? currentStudent?.classSectionId ?? '';
+
+    if (classId.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
     final repo = ref.read(schoolRepositoryProvider);
     final cls = await repo.getClassSectionById(classId);
@@ -73,6 +79,10 @@ class _TimetableViewScreenState extends ConsumerState<TimetableViewScreen> {
   ImageProvider _resolveImageProvider(String url) {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return NetworkImage(url);
+    }
+    final file = File(url);
+    if (file.existsSync()) {
+      return FileImage(file);
     }
     return AssetImage(url);
   }

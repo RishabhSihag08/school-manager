@@ -31,7 +31,7 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
   // Student Login
   final _studentRollController = TextEditingController();
   final _studentPinController = TextEditingController();
-  String _studentSelectedClass = 'class-8b';
+  String? _studentSelectedClass;
   List<ClassSection> _availableClasses = [];
   bool _isLoadingClasses = false;
 
@@ -86,12 +86,21 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
       return;
     }
 
+    final selectedClassId = _studentSelectedClass ??
+        (_availableClasses.isNotEmpty ? _availableClasses.first.id : null);
+    if (selectedClassId == null || selectedClassId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select your Class & Section')),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final repo = ref.read(schoolRepositoryProvider);
       final roll = int.tryParse(rollStr) ?? 1;
       final student = await repo.loginStudent(
-        classSectionId: _studentSelectedClass,
+        classSectionId: selectedClassId,
         rollNo: roll,
         pin: pin,
       );
@@ -621,19 +630,13 @@ class _WelcomeRoleScreenState extends ConsumerState<WelcomeRoleScreen> {
                                     ? _studentSelectedClass
                                     : (_availableClasses.isNotEmpty ? _availableClasses.first.id : null),
                                 isExpanded: true,
-                                items: _availableClasses.isNotEmpty
-                                    ? _availableClasses.map((c) {
-                                        return DropdownMenuItem(
-                                          value: c.id,
-                                          child: Text(c.displayName),
-                                        );
-                                      }).toList()
-                                    : const [
-                                        DropdownMenuItem(
-                                          value: 'class-8b',
-                                          child: Text('Class 8-B'),
-                                        ),
-                                      ],
+                                hint: const Text('Select Class'),
+                                items: _availableClasses.map((c) {
+                                  return DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.displayName),
+                                  );
+                                }).toList(),
                                 onChanged: (val) {
                                   if (val != null) setState(() => _studentSelectedClass = val);
                                 },

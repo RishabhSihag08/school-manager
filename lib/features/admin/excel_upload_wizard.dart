@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -36,8 +37,14 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
   // Step 1 State
   String _selectedExamId = 'exam-half-yearly';
   String _selectedExamName = 'Half Yearly Examination';
-  String _selectedClassId = 'class-8b';
-  String _selectedClassName = 'Class 8-B';
+  bool _isCustomExam = false;
+  final TextEditingController _customExamNameCtrl = TextEditingController();
+  final TextEditingController _maxMarksCtrl = TextEditingController(text: '100');
+  DateTime _declarationDate = DateTime.now();
+  final Set<String> _selectedSubjectCodes = {'MATH', 'SCI', 'ENG', 'SST', 'HIN'};
+
+  String _selectedClassId = '';
+  String _selectedClassName = '';
   List<ClassSection> _classes = [];
   bool _isLoadingClasses = false;
   double _maxMarks = 100.0;
@@ -58,12 +65,26 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
     {'code': 'ENG', 'name': 'English'},
     {'code': 'SST', 'name': 'Social Science'},
     {'code': 'HIN', 'name': 'Hindi'},
+    {'code': 'COMP', 'name': 'Computer Science'},
+    {'code': 'PHY', 'name': 'Physics'},
+    {'code': 'CHEM', 'name': 'Chemistry'},
+    {'code': 'BIO', 'name': 'Biology'},
+    {'code': 'ECON', 'name': 'Economics'},
+    {'code': 'ACC', 'name': 'Accountancy'},
+    {'code': 'BST', 'name': 'Business Studies'},
   ];
 
   @override
   void initState() {
     super.initState();
     _loadClasses();
+  }
+
+  @override
+  void dispose() {
+    _customExamNameCtrl.dispose();
+    _maxMarksCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadClasses() async {
@@ -106,20 +127,33 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
       final repo = ref.read(schoolRepositoryProvider);
       final students = await repo.getStudentsForClass(_selectedClassId);
 
+      final activeExamName = _isCustomExam && _customExamNameCtrl.text.trim().isNotEmpty
+          ? _customExamNameCtrl.text.trim()
+          : _selectedExamName;
+      final parsedMaxMarks = double.tryParse(_maxMarksCtrl.text.trim()) ?? _maxMarks;
+      final activeSubjects = _subjects
+          .where((s) => _selectedSubjectCodes.contains(s['code']))
+          .toList();
+
+      if (activeSubjects.isEmpty) {
+        throw Exception('Please select at least one subject to include in the examination template.');
+      }
+
       final bytes = _excelService.generateTemplate(
         examId: _selectedExamId,
-        examName: _selectedExamName,
+        examName: activeExamName,
         classSectionId: _selectedClassId,
         className: _selectedClassName,
         students: students,
-        subjects: _subjects,
-        maxMarks: _maxMarks,
+        subjects: activeSubjects,
+        maxMarks: parsedMaxMarks,
+        declarationDate: _declarationDate,
       );
 
       final sanitizedClass =
           _selectedClassName.replaceAll(' ', '_').replaceAll('/', '_');
       final sanitizedExam =
-          _selectedExamName.replaceAll(' ', '_').replaceAll('/', '_');
+          activeExamName.replaceAll(' ', '_').replaceAll('/', '_');
       final fileName = '${sanitizedClass}_${sanitizedExam}_template.xlsx';
 
       // Save generated Uint8List bytes to a real file in temporary directory
@@ -769,46 +803,254 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                 items: const [
                   DropdownMenuItem(
                     value: 'exam-ut1',
-                    child: Text('Unit Test 1 (Max: 50)',
-                        overflow: TextOverflow.ellipsis),
+                    child: Text('Unit Test 1', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-half-yearly',
-                    child: Text('Half Yearly Examination (Max: 100)',
-                        overflow: TextOverflow.ellipsis),
+                    child: Text('Half Yearly Examination', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-ut2',
-                    child: Text('Unit Test 2 (Max: 50)',
-                        overflow: TextOverflow.ellipsis),
+                    child: Text('Unit Test 2', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'exam-finals',
-                    child: Text('Annual Final Examination (Max: 100)',
-                        overflow: TextOverflow.ellipsis),
+                    child: Text('Annual Final Examination', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'exam-periodic',
+                    child: Text('Periodic Assessment / Test', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'exam-class-test',
+                    child: Text('Class Weekly Test', overflow: TextOverflow.ellipsis),
+                  ),
+                  DropdownMenuItem(
+                    value: 'exam-custom',
+                    child: Text('Custom Examination / Small Test...', overflow: TextOverflow.ellipsis),
                   ),
                 ],
                 onChanged: (val) {
                   if (val != null) {
                     setState(() {
                       _selectedExamId = val;
-                      if (val.contains('ut')) {
-                        _maxMarks = 50.0;
-                      } else {
-                        _maxMarks = 100.0;
-                      }
+                      _isCustomExam = val == 'exam-custom';
                       if (val == 'exam-ut1') {
                         _selectedExamName = 'Unit Test 1';
+                        _maxMarksCtrl.text = '50';
+                        _maxMarks = 50.0;
                       } else if (val == 'exam-half-yearly') {
                         _selectedExamName = 'Half Yearly Examination';
+                        _maxMarksCtrl.text = '100';
+                        _maxMarks = 100.0;
                       } else if (val == 'exam-ut2') {
                         _selectedExamName = 'Unit Test 2';
-                      } else {
+                        _maxMarksCtrl.text = '50';
+                        _maxMarks = 50.0;
+                      } else if (val == 'exam-finals') {
                         _selectedExamName = 'Annual Final Examination';
+                        _maxMarksCtrl.text = '100';
+                        _maxMarks = 100.0;
+                      } else if (val == 'exam-periodic') {
+                        _selectedExamName = 'Periodic Assessment';
+                        _maxMarksCtrl.text = '40';
+                        _maxMarks = 40.0;
+                      } else if (val == 'exam-class-test') {
+                        _selectedExamName = 'Class Weekly Test';
+                        _maxMarksCtrl.text = '25';
+                        _maxMarks = 25.0;
+                      } else {
+                        _selectedExamName = _customExamNameCtrl.text.isNotEmpty
+                            ? _customExamNameCtrl.text
+                            : 'Custom Test';
                       }
                     });
                   }
                 },
+              ),
+
+              if (_isCustomExam) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _customExamNameCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Type Examination Name *',
+                    hintText: 'e.g. Physics Chapter 4 Quiz, Chemistry Mid-Term',
+                    prefixIcon: const Icon(LucideIcons.filePen, size: 18),
+                    filled: true,
+                    fillColor: AppColors.canvasBackground,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.cardBorder),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    setState(() {
+                      _selectedExamName = v.trim().isNotEmpty ? v.trim() : 'Custom Test';
+                    });
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Maximum Marks of the Examination
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Maximum Marks of Examination', style: AppTypography.titleSmall),
+                  Wrap(
+                    spacing: 6,
+                    children: [20, 25, 40, 50, 80, 100].map((m) {
+                      final isSelected = _maxMarksCtrl.text == m.toString();
+                      return ChoiceChip(
+                        label: Text('$m'),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _maxMarksCtrl.text = '$m';
+                              _maxMarks = m.toDouble();
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _maxMarksCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Maximum Marks *',
+                  hintText: 'e.g. 50 or 100',
+                  prefixIcon: const Icon(LucideIcons.award, size: 18),
+                  suffixText: 'Marks',
+                  filled: true,
+                  fillColor: AppColors.canvasBackground,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder),
+                  ),
+                ),
+                onChanged: (val) {
+                  final parsed = double.tryParse(val.trim());
+                  if (parsed != null && parsed > 0) {
+                    setState(() => _maxMarks = parsed);
+                  }
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Included Subjects Selection
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Select Subjects to Include', style: AppTypography.titleSmall),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        if (_selectedSubjectCodes.length == _subjects.length) {
+                          _selectedSubjectCodes.clear();
+                        } else {
+                          _selectedSubjectCodes.addAll(_subjects.map((s) => s['code']!));
+                        }
+                      });
+                    },
+                    child: Text(
+                      _selectedSubjectCodes.length == _subjects.length
+                          ? 'Deselect All'
+                          : 'Select All',
+                      style: AppTypography.caption.copyWith(color: AppColors.brandPrimary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _subjects.map((sub) {
+                  final code = sub['code']!;
+                  final name = sub['name']!;
+                  final isSelected = _selectedSubjectCodes.contains(code);
+                  return FilterChip(
+                    label: Text('$name ($code)'),
+                    selected: isSelected,
+                    selectedColor: AppColors.brandPrimaryLight,
+                    checkmarkColor: AppColors.brandPrimary,
+                    labelStyle: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected ? AppColors.brandPrimary : AppColors.inkPrimary,
+                    ),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedSubjectCodes.add(code);
+                        } else {
+                          if (_selectedSubjectCodes.length > 1) {
+                            _selectedSubjectCodes.remove(code);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('At least one subject must be included.'),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                          }
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Result Declaration Date
+              Text('Result Declaration Date', style: AppTypography.titleSmall),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _declarationDate,
+                    firstDate: DateTime(DateTime.now().year - 2),
+                    lastDate: DateTime(DateTime.now().year + 2),
+                  );
+                  if (picked != null) {
+                    setState(() => _declarationDate = picked);
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.canvasBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(LucideIcons.calendar, size: 18, color: AppColors.brandPrimary),
+                          const SizedBox(width: 10),
+                          Text(
+                            DateFormat('dd MMMM yyyy').format(_declarationDate),
+                            style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      const Icon(LucideIcons.chevronDown, size: 16, color: AppColors.inkSecondary),
+                    ],
+                  ),
+                ),
               ),
 
               const SizedBox(height: 16),
@@ -850,7 +1092,7 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                             DropdownMenuItem<String>(
                               value: _selectedClassId,
                               child: Text(
-                                _selectedClassName,
+                                _selectedClassName.isNotEmpty ? _selectedClassName : 'No classes available',
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -874,8 +1116,8 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                           (c) => c.id == val,
                           orElse: () => ClassSection(
                             id: val,
-                            grade: 8,
-                            section: 'B',
+                            grade: 0,
+                            section: '',
                             classCode: '',
                           ),
                         );
@@ -913,11 +1155,9 @@ class _ExcelUploadWizardState extends ConsumerState<ExcelUploadWizard> {
                         _tag('Roll_No', isSystem: true),
                         _tag('Student_Name', isSystem: true),
                         _tag('Admission_No', isSystem: true),
-                        _tag('ENG (${_maxMarks.toInt()})'),
-                        _tag('MATH (${_maxMarks.toInt()})'),
-                        _tag('SCI (${_maxMarks.toInt()})'),
-                        _tag('SST (${_maxMarks.toInt()})'),
-                        _tag('HIN (${_maxMarks.toInt()})'),
+                        ..._subjects
+                            .where((s) => _selectedSubjectCodes.contains(s['code']))
+                            .map((s) => _tag('${s['code']} (${_maxMarks.toInt()})')),
                         _tag('Class_Teacher_Remarks', isSystem: true),
                       ],
                     ),

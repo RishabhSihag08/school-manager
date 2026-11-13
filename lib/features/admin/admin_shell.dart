@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_config.dart';
 import '../../core/models/models.dart';
@@ -42,6 +44,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   final List<ClassSection> _classes = [];
   final List<Announcement> _announcements = [];
   final List<Student> _allStudents = [];
+  final List<Map<String, dynamic>> _subjectAllocations = [];
 
   String _selectedClassFilterId = 'all';
   String _studentSearchQuery = '';
@@ -65,14 +68,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
     final repo = ref.read(schoolRepositoryProvider);
     final classes = await repo.getAllClassSections();
     final announcements = await repo.getAnnouncements();
-
-    final allStudents = <Student>[];
-    for (final cls in classes) {
-      try {
-        final classStudents = await repo.getStudentsForClass(cls.id);
-        allStudents.addAll(classStudents);
-      } catch (_) {}
-    }
+    final allStudents = await repo.getAllStudents();
+    final allocations = await repo.getAllSubjectAllocations();
 
     if (mounted) {
       setState(() {
@@ -82,6 +79,8 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         _announcements.addAll(announcements);
         _allStudents.clear();
         _allStudents.addAll(allStudents);
+        _subjectAllocations.clear();
+        _subjectAllocations.addAll(allocations);
         if (_selectedTimetableClassId == null ||
             !_classes.any((c) => c.id == _selectedTimetableClassId)) {
           if (_classes.isNotEmpty) {
@@ -96,13 +95,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   Future<void> _loadStudents() async {
     setState(() => _isLoadingStudents = true);
     final repo = ref.read(schoolRepositoryProvider);
-    final allStudents = <Student>[];
-    for (final cls in _classes) {
-      try {
-        final classStudents = await repo.getStudentsForClass(cls.id);
-        allStudents.addAll(classStudents);
-      } catch (_) {}
-    }
+    final allStudents = await repo.getAllStudents();
     if (mounted) {
       setState(() {
         _allStudents.clear();
@@ -775,8 +768,11 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                           ),
                           const SizedBox(height: 12),
                           // Bottom Tier: Join code badge (with ticket icon) + 'View Roster' & Delete buttons
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -797,7 +793,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                     Text(
                                       cls.classCode,
                                       style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 13,
+                                        fontSize: 12.5,
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.inkPrimary,
                                       ),
@@ -805,8 +801,9 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                   ],
                                 ),
                               ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
                                 children: [
                                   OutlinedButton.icon(
                                     onPressed: () => _confirmDeleteClass(cls),
@@ -821,7 +818,6 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                                           horizontal: 10, vertical: 8),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
                                   OutlinedButton.icon(
                                     onPressed: () {
                                       setState(() {
@@ -900,82 +896,87 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                               ],
                             ),
                           ),
-                          // Join Code Pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.canvasBackground,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: AppColors.cardBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(LucideIcons.ticket,
-                                    size: 14, color: AppColors.brandPrimary),
-                                const SizedBox(width: 6),
-                                Text(
-                                  cls.classCode,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Join Code Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.canvasBackground,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(LucideIcons.ticket,
+                                        size: 14, color: AppColors.brandPrimary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      cls.classCode,
+                                      style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.inkPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Lock status chip
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: cls.isCodeLocked
+                                      ? const Color(0xFFFEF3C7)
+                                      : const Color(0xFFD1FAE5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  cls.isCodeLocked ? 'Locked' : 'Open',
                                   style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 13,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.inkPrimary,
+                                    color: cls.isCodeLocked
+                                        ? AppColors.warning
+                                        : AppColors.success,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Lock status chip
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: cls.isCodeLocked
-                                  ? const Color(0xFFFEF3C7)
-                                  : const Color(0xFFD1FAE5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              cls.isCodeLocked ? 'Locked' : 'Open',
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: cls.isCodeLocked
-                                    ? AppColors.warning
-                                    : AppColors.success,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // View Roster quick button
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _selectedClassFilterId = cls.id;
-                                _selectedNavIndex = 1;
-                              });
-                            },
-                            icon: const Icon(LucideIcons.users, size: 14),
-                            label: const Text('View Roster'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Delete Class button
-                          OutlinedButton.icon(
-                            onPressed: () => _confirmDeleteClass(cls),
-                            icon: const Icon(LucideIcons.trash2,
-                                size: 14, color: AppColors.danger),
-                            label: const Text('Delete Class'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.danger,
-                              side: const BorderSide(color: Color(0xFFFCA5A5)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                            ),
+                              // View Roster quick button
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedClassFilterId = cls.id;
+                                    _selectedNavIndex = 1;
+                                  });
+                                },
+                                icon: const Icon(LucideIcons.users, size: 14),
+                                label: const Text('View Roster'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                              // Delete Class button
+                              OutlinedButton.icon(
+                                onPressed: () => _confirmDeleteClass(cls),
+                                icon: const Icon(LucideIcons.trash2,
+                                    size: 14, color: AppColors.danger),
+                                label: const Text('Delete Class'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.danger,
+                                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -1030,6 +1031,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
     if (confirmed == true && mounted) {
       try {
+        setState(() {
+          _classes.removeWhere((c) => c.id == cls.id);
+          _allStudents.removeWhere((s) => s.classSectionId == cls.id);
+        });
         await ref.read(schoolRepositoryProvider).deleteClassSection(cls.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -2275,32 +2280,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   // VIEW 3: SUBJECT ALLOCATION MATRIX
   // ==========================================
   Widget _buildSubjectAllocationMatrixView() {
-    final matrixData = [
-      {
-        'class': 'Class 8-B',
-        'math': 'Ramesh Sharma (Homeroom)',
-        'sci': 'Sunita Rao',
-        'eng': 'Vikram Singh',
-        'sst': 'Amit Patel',
-        'hin': 'Priya Joshi',
-      },
-      {
-        'class': 'Class 6-A',
-        'math': 'Ramesh Sharma',
-        'sci': 'Sunita Rao (Homeroom)',
-        'eng': 'Neha Kapoor',
-        'sst': 'Amit Patel',
-        'hin': 'Priya Joshi',
-      },
-      {
-        'class': 'Class 7-C',
-        'math': 'Ramesh Sharma',
-        'sci': 'Pooja Verma',
-        'eng': 'Vikram Singh (Homeroom)',
-        'sst': 'Rajeev Nair',
-        'hin': 'Priya Joshi',
-      },
-    ];
+    final subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi'];
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -2310,6 +2290,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
           children: [
             Text('Subject Allocation Matrix',
                 style: AppTypography.headlineSmall),
+            const SizedBox(height: 4),
             Text(
               'Enforces 1 Homeroom Class Teacher limit and tracks subject teaching load across classes.',
               style: AppTypography.bodySmall
@@ -2319,48 +2300,99 @@ class _AdminShellState extends ConsumerState<AdminShell> {
         ),
         const SizedBox(height: 20),
 
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: BentoCard(
-            padding: const EdgeInsets.all(16),
-            child: DataTable(
-              headingRowColor:
-                  WidgetStateProperty.all(AppColors.canvasBackground),
-              columns: const [
-                DataColumn(label: Text('Class Section')),
-                DataColumn(label: Text('Mathematics')),
-                DataColumn(label: Text('Science')),
-                DataColumn(label: Text('English')),
-                DataColumn(label: Text('Social Science')),
-                DataColumn(label: Text('Hindi')),
-              ],
-              rows: matrixData.map((row) {
-                return DataRow(
-                  cells: [
-                    DataCell(Text(row['class']!,
-                        style: const TextStyle(fontWeight: FontWeight.bold))),
-                    DataCell(_matrixCell(row['math']!)),
-                    DataCell(_matrixCell(row['sci']!)),
-                    DataCell(_matrixCell(row['eng']!)),
-                    DataCell(_matrixCell(row['sst']!)),
-                    DataCell(_matrixCell(row['hin']!)),
-                  ],
-                );
-              }).toList(),
+        if (_classes.isEmpty)
+          BentoCard(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
+                children: [
+                  const Icon(LucideIcons.layers,
+                      size: 40, color: AppColors.inkSecondary),
+                  const SizedBox(height: 12),
+                  Text('No Class Sections Configured',
+                      style: AppTypography.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Create classes in the "Classes & Sections" tab to configure subject allocations.',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.inkSecondary),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: BentoCard(
+              padding: const EdgeInsets.all(16),
+              child: DataTable(
+                headingRowColor:
+                    WidgetStateProperty.all(AppColors.canvasBackground),
+                columns: [
+                  const DataColumn(label: Text('Class Section')),
+                  ...subjects.map((s) => DataColumn(label: Text(s))),
+                ],
+                rows: _classes.map((cls) {
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(cls.displayName,
+                          style: const TextStyle(fontWeight: FontWeight.bold))),
+                      ...subjects.map((subName) {
+                        // Find allocated teacher for this class and subject
+                        final match = _subjectAllocations.cast<Map<String, dynamic>?>().firstWhere(
+                          (a) =>
+                              a?['class_section_id'] == cls.id &&
+                              a?['subject_name']?.toString().toLowerCase() ==
+                                  subName.toLowerCase(),
+                          orElse: () => null,
+                        );
+
+                        if (match != null && match['teacher_name'] != null) {
+                          final teacherName = match['teacher_name'].toString();
+                          final isHomeroom = cls.classTeacherName == teacherName;
+                          return DataCell(_matrixCell(
+                              isHomeroom ? '$teacherName (Homeroom)' : teacherName));
+                        }
+
+                        // If not specifically allocated, show "Not allocated"
+                        return DataCell(_matrixCell('Not allocated'));
+                      }),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 
   Widget _matrixCell(String teacher) {
+    if (teacher == 'Not allocated') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.canvasBackground,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Text(
+          'Not allocated',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 11,
+            color: AppColors.inkMuted,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
     final isHomeroom = teacher.contains('Homeroom');
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(teacher.replaceAll(' (Homeroom)', ''),
-            style: AppTypography.bodySmall),
+            style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w500)),
         if (isHomeroom) ...[
           const SizedBox(width: 4),
           const Icon(LucideIcons.crown, color: Colors.amber, size: 14),
@@ -2630,18 +2662,23 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                   onPressed: () async {
                     if (titleCtrl.text.trim().isEmpty) return;
                     final repo = ref.read(schoolRepositoryProvider);
-                    await repo.createAnnouncement(
-                      Announcement(
-                        id: 'ann-${DateTime.now().millisecondsSinceEpoch}',
-                        title: titleCtrl.text.trim(),
-                        body: bodyCtrl.text.trim(),
-                        category: category,
-                        isPinned: isPinned,
-                        createdAt: DateTime.now(),
-                      ),
+                    final newAnn = Announcement(
+                      id: 'ann-${DateTime.now().millisecondsSinceEpoch}',
+                      title: titleCtrl.text.trim(),
+                      body: bodyCtrl.text.trim(),
+                      category: category,
+                      isPinned: isPinned,
+                      createdAt: DateTime.now(),
                     );
+                    await repo.createAnnouncement(newAnn);
                     if (ctx.mounted) Navigator.pop(ctx);
-                    if (mounted) _loadAdminData();
+                    if (mounted) {
+                      setState(() {
+                        _announcements.removeWhere((a) => a.id == newAnn.id);
+                        _announcements.insert(0, newAnn);
+                      });
+                      await _loadAdminData();
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandPrimary,
@@ -2931,25 +2968,44 @@ class _AdminShellState extends ConsumerState<AdminShell> {
                               if (result != null &&
                                   result.files.isNotEmpty) {
                                 final file = result.files.first;
-                                final pickedName = file.name;
+                                String savedPath = file.name;
+                                try {
+                                  final appDir = await getApplicationDocumentsDirectory();
+                                  final timetableDir = Directory('${appDir.path}/timetables');
+                                  if (!timetableDir.existsSync()) {
+                                    await timetableDir.create(recursive: true);
+                                  }
+                                  final ext = file.extension ?? 'jpg';
+                                  final targetFile = File('${timetableDir.path}/timetable_${selectedClass.id}.$ext');
+                                  if (file.path != null && File(file.path!).existsSync()) {
+                                    await File(file.path!).copy(targetFile.path);
+                                    savedPath = targetFile.path;
+                                  } else if (file.bytes != null) {
+                                    await targetFile.writeAsBytes(file.bytes!);
+                                    savedPath = targetFile.path;
+                                  }
+                                } catch (_) {
+                                  if (file.path != null) savedPath = file.path!;
+                                }
+
                                 final repo =
                                     ref.read(schoolRepositoryProvider);
                                 await repo.updateClassTimetableUrl(
-                                    selectedClass.id, pickedName);
+                                    selectedClass.id, savedPath);
 
                                 final idx = _classes.indexWhere(
                                     (c) => c.id == selectedClass.id);
                                 if (idx != -1) {
                                   setState(() {
                                     _classes[idx] = _classes[idx].copyWith(
-                                        timetableFileUrl: pickedName);
+                                        timetableFileUrl: savedPath);
                                   });
                                 }
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                          'Timetable for ${selectedClass.displayName} updated to $pickedName'),
+                                          'Timetable for ${selectedClass.displayName} uploaded successfully!'),
                                       backgroundColor: AppColors.success,
                                     ),
                                   );
