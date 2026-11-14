@@ -1,11 +1,15 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../core/models/student.dart';
 import '../../core/models/syllabus.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_typography.dart';
@@ -21,7 +25,8 @@ class SyllabusVaultScreen extends ConsumerStatefulWidget {
       _SyllabusVaultScreenState();
 }
 
-class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
+class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen>
+    with WidgetsBindingObserver {
   String _selectedTerm = 'all';
   List<Syllabus> _syllabi = [];
   bool _isLoading = true;
@@ -38,11 +43,31 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSyllabi();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadSyllabi();
+    }
+  }
+
   Future<void> _loadSyllabi() async {
-    final currentStudent = ref.read(currentStudentProvider);
+    var currentStudent = ref.read(currentStudentProvider);
+    if (currentStudent == null && (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'))) {
+      currentStudent = await SessionService.getSavedStudent();
+      if (currentStudent != null && mounted) {
+        ref.read(currentStudentProvider.notifier).state = currentStudent;
+      }
+    }
     final classId = currentStudent?.classSectionId ?? '';
     if (classId.isEmpty) {
       if (mounted) {
@@ -99,6 +124,17 @@ class _SyllabusVaultScreenState extends ConsumerState<SyllabusVaultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(appRefreshTriggerProvider, (prev, next) {
+      if (next > (prev ?? 0)) {
+        _loadSyllabi();
+      }
+    });
+    ref.listen<Student?>(currentStudentProvider, (prev, next) {
+      if (next != null && (prev == null || prev.id != next.id)) {
+        _loadSyllabi();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.canvasBackground,
       appBar: AppBar(

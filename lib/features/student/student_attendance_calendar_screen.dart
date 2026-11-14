@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,8 +8,10 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../core/models/attendance.dart';
+import '../../core/models/student.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_typography.dart';
@@ -22,7 +26,8 @@ class StudentAttendanceCalendarScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentAttendanceCalendarScreenState
-    extends ConsumerState<StudentAttendanceCalendarScreen> {
+    extends ConsumerState<StudentAttendanceCalendarScreen>
+    with WidgetsBindingObserver {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
   List<Attendance> _studentAttendance = [];
@@ -31,11 +36,31 @@ class _StudentAttendanceCalendarScreenState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAttendance();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadAttendance();
+    }
+  }
+
   Future<void> _loadAttendance({int? month, int? year}) async {
-    final currentStudent = ref.read(currentStudentProvider);
+    var currentStudent = ref.read(currentStudentProvider);
+    if (currentStudent == null && (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'))) {
+      currentStudent = await SessionService.getSavedStudent();
+      if (currentStudent != null && mounted) {
+        ref.read(currentStudentProvider.notifier).state = currentStudent;
+      }
+    }
     if (currentStudent == null) {
       setState(() => _isLoading = false);
       return;
@@ -68,6 +93,17 @@ class _StudentAttendanceCalendarScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(appRefreshTriggerProvider, (prev, next) {
+      if (next > (prev ?? 0)) {
+        _loadAttendance();
+      }
+    });
+    ref.listen<Student?>(currentStudentProvider, (prev, next) {
+      if (next != null && (prev == null || prev.id != next.id)) {
+        _loadAttendance();
+      }
+    });
+
     final selectedRecord = _getAttendanceForDate(_selectedDay);
 
     int totalPresent = 0;

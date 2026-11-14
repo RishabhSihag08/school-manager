@@ -4,7 +4,11 @@ import '../models/models.dart';
 import '../repositories/mock_school_repository.dart';
 import '../repositories/school_repository.dart';
 import '../repositories/supabase_school_repository.dart';
+import '../services/connectivity_service.dart';
 import '../services/ota_update_service.dart';
+
+export '../services/connectivity_service.dart'
+    show connectivityStatusProvider, appRefreshTriggerProvider;
 
 /// Global repository provider for School operations
 final schoolRepositoryProvider = Provider<SchoolRepository>((ref) {

@@ -122,6 +122,51 @@ class SessionService {
     return AppRoutes.onboarding;
   }
 
+  /// Read saved student from SharedPreferences
+  static Future<Student?> getSavedStudent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString(_keyAuthRole);
+      if (role == 'student') {
+        final studentJsonStr = prefs.getString(_keyStudentJson);
+        if (studentJsonStr != null && studentJsonStr.isNotEmpty) {
+          final map = jsonDecode(studentJsonStr) as Map<String, dynamic>;
+          return Student.fromJson(map);
+        }
+      }
+    } catch (e) {
+      debugPrint('SessionService: Error reading saved student: $e');
+    }
+    return null;
+  }
+
+  /// Read saved staff from SharedPreferences
+  static Future<Map<String, dynamic>?> getSavedStaff() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString(_keyAuthRole);
+      if (role == 'teacher' || role == 'admin') {
+        final staffJsonStr = prefs.getString(_keyStaffJson);
+        if (staffJsonStr != null && staffJsonStr.isNotEmpty) {
+          return jsonDecode(staffJsonStr) as Map<String, dynamic>;
+        }
+      }
+    } catch (e) {
+      debugPrint('SessionService: Error reading saved staff: $e');
+    }
+    return null;
+  }
+
+  /// Read saved role from SharedPreferences
+  static Future<String?> getSavedRole() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_keyAuthRole);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Show a confirmation dialog and log out the user from School Manager
   static Future<bool> confirmAndLogout(BuildContext context, WidgetRef ref) async {
     final shouldLogout = await showDialog<bool>(

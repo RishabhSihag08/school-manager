@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:confetti/confetti.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,7 @@ import '../../core/config/app_config.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/core_providers.dart';
 import '../../core/router/app_router.dart';
+import '../../core/services/session_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/bento_card.dart';
@@ -25,7 +28,8 @@ class StudentResultsScreen extends ConsumerStatefulWidget {
       _StudentResultsScreenState();
 }
 
-class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
+class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen>
+    with WidgetsBindingObserver {
   late ConfettiController _confettiController;
   String _selectedExam = 'Half Yearly Examination';
   List<ExamResult> _results = [];
@@ -42,6 +46,7 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 2));
     _loadResults();
@@ -49,12 +54,26 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _confettiController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadResults();
+    }
+  }
+
   Future<void> _loadResults() async {
-    final currentStudent = ref.read(currentStudentProvider);
+    var currentStudent = ref.read(currentStudentProvider);
+    if (currentStudent == null && (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'))) {
+      currentStudent = await SessionService.getSavedStudent();
+      if (currentStudent != null && mounted) {
+        ref.read(currentStudentProvider.notifier).state = currentStudent;
+      }
+    }
     if (currentStudent == null) {
       if (mounted) setState(() => _isLoading = false);
       return;
@@ -444,6 +463,17 @@ class _StudentResultsScreenState extends ConsumerState<StudentResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(appRefreshTriggerProvider, (prev, next) {
+      if (next > (prev ?? 0)) {
+        _loadResults();
+      }
+    });
+    ref.listen<Student?>(currentStudentProvider, (prev, next) {
+      if (next != null && (prev == null || prev.id != next.id)) {
+        _loadResults();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.canvasBackground,
       appBar: AppBar(

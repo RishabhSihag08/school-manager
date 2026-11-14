@@ -4,8 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/app_config.dart';
 import 'core/providers/core_providers.dart';
 import 'core/router/app_router.dart';
+import 'core/services/connectivity_service.dart';
 import 'core/services/session_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/no_internet_screen.dart';
 import 'core/widgets/ota_update_dialog.dart';
 
 void main() async {
@@ -23,13 +25,22 @@ void main() async {
     }
   }
 
-  // Determine initial navigation route based on saved session
+  // Determine initial navigation route and pre-restore session data before runApp
   final initialRoute = await SessionService.getSavedInitialRoute();
+  final restoredStudent = await SessionService.getSavedStudent();
+  final restoredStaff = await SessionService.getSavedStaff();
+  final restoredRole = await SessionService.getSavedRole();
 
   runApp(
     ProviderScope(
       overrides: [
         initialRouteProvider.overrideWith((ref) => initialRoute),
+        if (restoredStudent != null)
+          currentStudentProvider.overrideWith((ref) => restoredStudent),
+        if (restoredStaff != null)
+          currentStaffProvider.overrideWith((ref) => restoredStaff),
+        if (restoredRole != null)
+          activeRoleProvider.overrideWith((ref) => restoredRole),
       ],
       child: const SchoolManagerApp(),
     ),
@@ -44,17 +55,33 @@ class SchoolManagerApp extends ConsumerStatefulWidget {
   ConsumerState<SchoolManagerApp> createState() => _SchoolManagerAppState();
 }
 
-class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp> {
+class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Restore session state into Riverpod providers
-    SessionService.restoreSession(ref);
+    WidgetsBinding.instance.addObserver(this);
 
-    // OTA startup check (GitHub Releases)
+    // Initial check for internet connectivity on app launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(connectivityStatusProvider.notifier).checkConnectivity();
       _runStartupOtaChecks();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Auto-refresh network status and trigger screen refresh when reopening the app
+      ref.read(connectivityStatusProvider.notifier).checkConnectivity();
+      ref.read(appRefreshTriggerProvider.notifier).state++;
+    }
   }
 
   Future<void> _runStartupOtaChecks() async {
@@ -80,6 +107,7 @@ class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final reduceMotion = ref.watch(reduceMotionProvider);
+    final isOnline = ref.watch(connectivityStatusProvider);
 
     return MaterialApp.router(
       title: AppConfig.appName,
@@ -87,11 +115,19 @@ class _SchoolManagerAppState extends ConsumerState<SchoolManagerApp> {
       theme: AppTheme.lightTheme,
       routerConfig: router,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            disableAnimations: reduceMotion,
-          ),
-          child: child ?? const SizedBox.shrink(),
+        return Stack(
+          children: [
+            MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: reduceMotion,
+              ),
+              child: child ?? const SizedBox.shrink(),
+            ),
+            if (!isOnline)
+              const Positioned.fill(
+                child: NoInternetScreen(),
+              ),
+          ],
         );
       },
     );

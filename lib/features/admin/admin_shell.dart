@@ -38,7 +38,8 @@ class AdminShell extends ConsumerStatefulWidget {
   ConsumerState<AdminShell> createState() => _AdminShellState();
 }
 
-class _AdminShellState extends ConsumerState<AdminShell> {
+class _AdminShellState extends ConsumerState<AdminShell>
+    with WidgetsBindingObserver {
   int _selectedNavIndex = 0;
   bool _isLoading = false;
   bool _isLoadingStudents = false;
@@ -57,13 +58,23 @@ class _AdminShellState extends ConsumerState<AdminShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAdminData();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Auto-refresh when reopening the app
+      _loadAdminData();
+    }
   }
 
   Future<void> _loadAdminData() async {
@@ -268,6 +279,13 @@ class _AdminShellState extends ConsumerState<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Auto-refresh when app reopens or network reconnects
+    ref.listen<int>(appRefreshTriggerProvider, (prev, next) {
+      if (next > (prev ?? 0)) {
+        _loadAdminData();
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 850;
 

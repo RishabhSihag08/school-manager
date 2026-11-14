@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,7 +32,8 @@ class TeacherDashboard extends ConsumerStatefulWidget {
   ConsumerState<TeacherDashboard> createState() => _TeacherDashboardState();
 }
 
-class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
+class _TeacherDashboardState extends ConsumerState<TeacherDashboard>
+    with WidgetsBindingObserver {
   int _selectedNavIndex = 0;
   bool _isCodeLocked = false;
   bool _attendanceDoneToday = false;
@@ -45,14 +48,35 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadInitialData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Auto-refresh when reopening the app
+      _loadInitialData();
+    }
   }
 
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     final repo = ref.read(schoolRepositoryProvider);
 
-    final staff = ref.read(currentStaffProvider);
+    var staff = ref.read(currentStaffProvider);
+    if (staff == null && (kIsWeb || !Platform.environment.containsKey('FLUTTER_TEST'))) {
+      staff = await SessionService.getSavedStaff();
+      if (staff != null && mounted) {
+        ref.read(currentStaffProvider.notifier).state = staff;
+      }
+    }
     final teacherId = staff?['id'] as String? ?? '';
     final teacherSubject = staff?['subject_name'] as String? ?? 'General';
     final teacherSubjectCode = staff?['subject_code'] as String? ?? 'GEN';
@@ -626,6 +650,20 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // Auto-refresh when app reopens or network reconnects
+    ref.listen<int>(appRefreshTriggerProvider, (prev, next) {
+      if (next > (prev ?? 0)) {
+        _loadInitialData();
+      }
+    });
+
+    // Auto-refresh if staff session changes
+    ref.listen<Map<String, dynamic>?>(currentStaffProvider, (prev, next) {
+      if (next != null && (prev == null || prev['id'] != next['id'])) {
+        _loadInitialData();
+      }
+    });
+
     final staff = ref.watch(currentStaffProvider);
     final teacherName = staff?['full_name'] ?? 'Faculty';
     final teachingSubject = staff?['subject_name'] ?? 'General';
