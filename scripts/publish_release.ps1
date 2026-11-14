@@ -8,16 +8,19 @@
   and allow one-tap background download & native installer launch.
 
 .PARAMETER Version
-  The version string (e.g., '1.0.1'). Default comes from pubspec.yaml.
+  The version string (e.g., '1.0.12'). Default comes from pubspec.yaml.
 
 .PARAMETER ReleaseTitle
-  Optional release title. Defaults to 'CampusVibe v<Version>'.
+  Optional release title. Defaults to 'School Manager v<Version> — ...'.
 
 .PARAMETER ReleaseNotes
   Changelog / Release notes text.
 
+.PARAMETER NotesFile
+  Path to markdown file containing release notes.
+
 .PARAMETER RepoOwner
-  GitHub repository owner or organization (default: 'school-org').
+  GitHub repository owner or organization (default: 'RishabhSihag08').
 
 .PARAMETER RepoName
   GitHub repository name (default: 'school-manager').
@@ -30,10 +33,11 @@
 #>
 
 param(
-    [string]$Version = "1.0.1",
+    [string]$Version = "",
     [string]$ReleaseTitle = "",
-    [string]$ReleaseNotes = "✨ CampusVibe Indian School Management System Release with OTA updates, 6-char Class Code join, Attendance, Timetable, Syllabus vault, and Excel exam import.",
-    [string]$RepoOwner = "school-org",
+    [string]$ReleaseNotes = "",
+    [string]$NotesFile = "",
+    [string]$RepoOwner = "RishabhSihag08",
     [string]$RepoName = "school-manager",
     [switch]$DryRun,
     [switch]$SkipBuild
@@ -41,20 +45,49 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " CampusVibe OTA Release Publisher (v$Version)" -ForegroundColor Cyan
-Write-Host " Target: https://github.com/$RepoOwner/$RepoName" -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
-
-if ([string]::IsNullOrWhiteSpace($ReleaseTitle)) {
-    $ReleaseTitle = "CampusVibe v$Version"
+# Resolve directories safely
+$flutterDir = if (Test-Path (Join-Path $PSScriptRoot "..\pubspec.yaml")) {
+    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+} elseif (Test-Path (Join-Path (Split-Path -Parent $PSScriptRoot) "school_manager\pubspec.yaml")) {
+    Join-Path (Split-Path -Parent $PSScriptRoot) "school_manager"
+} else {
+    $PSScriptRoot
 }
 
-$projectRoot = Split-Path -Parent $PSScriptRoot
-$flutterDir = Join-Path $projectRoot "school_manager"
+# Auto-detect version if not passed
+$pubspecPath = Join-Path $flutterDir "pubspec.yaml"
+if ([string]::IsNullOrWhiteSpace($Version) -and (Test-Path $pubspecPath)) {
+    $pubspecContent = Get-Content $pubspecPath -Raw
+    if ($pubspecContent -match 'version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+        $Version = $matches[1]
+    }
+}
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = "1.0.12"
+}
+
+# Load notes from file if provided
+if (-not [string]::IsNullOrWhiteSpace($NotesFile) -and (Test-Path $NotesFile)) {
+    $ReleaseNotes = Get-Content $NotesFile -Raw
+} elseif ([string]::IsNullOrWhiteSpace($ReleaseNotes)) {
+    $ReleaseNotes = "✨ School Manager v$Version Release with Instant Auto-Refresh on Launch, Offline Barrier Screen & Performance Improvements."
+}
+
+if ([string]::IsNullOrWhiteSpace($ReleaseTitle)) {
+    $ReleaseTitle = "School Manager v$Version — Instant Sync & Offline Protection"
+}
+
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host " CampusVibe / School Manager OTA Release Publisher (v$Version)" -ForegroundColor Cyan
+Write-Host " Target: https://github.com/$RepoOwner/$RepoName" -ForegroundColor Cyan
+Write-Host " Working Dir: $flutterDir" -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+
 $apkPath = Join-Path $flutterDir "build\app\outputs\flutter-apk\app-release.apk"
-$targetApkName = "campusvibe-v$Version.apk"
+$targetApkName = "school-manager-v$Version.apk"
 $targetApkPath = Join-Path $flutterDir "build\app\outputs\flutter-apk\$targetApkName"
+$altApkName = "campusvibe-v$Version.apk"
+$altApkPath = Join-Path $flutterDir "build\app\outputs\flutter-apk\$altApkName"
 
 # 1. Build release APK
 if (-not $SkipBuild) {
@@ -79,6 +112,7 @@ if (-not (Test-Path $apkPath)) {
     }
 } else {
     Copy-Item -Path $apkPath -Destination $targetApkPath -Force
+    Copy-Item -Path $apkPath -Destination $altApkPath -Force
     $fileHash = Get-FileHash -Path $targetApkPath -Algorithm SHA256
     $fileSizeMB = [math]::Round((Get-Item $targetApkPath).Length / 1MB, 2)
     Write-Host "APK Created successfully:" -ForegroundColor Green
@@ -104,11 +138,44 @@ Write-Host "`n[3/3] Uploading release to GitHub..." -ForegroundColor Yellow
 $ghInstalled = Get-Command gh -ErrorAction SilentlyContinue
 if ($ghInstalled) {
     Write-Host "Using GitHub CLI (gh)..." -ForegroundColor Cyan
-    gh release create $tag $targetApkPath `
-        --repo "$RepoOwner/$RepoName" `
-        --title $ReleaseTitle `
-        --notes $ReleaseNotes
-    Write-Host "`nSuccessfully created GitHub Release $tag!" -ForegroundColor Green
+    
+    # Check if git tag exists locally/remotely
+    Push-Location $flutterDir
+    try {
+        $tagExists = git tag -l $tag
+        if (-not $tagExists) {
+            git tag -a $tag -m "Release $tag"
+            git push origin $tag
+        }
+    } catch {
+        Write-Warning "Git tag push notice: $_"
+    } finally {
+        Pop-Location
+    }
+
+    $existingRelease = gh release view $tag --repo "$RepoOwner/$RepoName" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Release $tag already exists. Updating release..." -ForegroundColor Yellow
+        if (-not [string]::IsNullOrWhiteSpace($NotesFile) -and (Test-Path $NotesFile)) {
+            gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes-file $NotesFile
+        } else {
+            gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes $ReleaseNotes
+        }
+        gh release upload $tag $targetApkPath --repo "$RepoOwner/$RepoName" --clobber
+    } else {
+        if (-not [string]::IsNullOrWhiteSpace($NotesFile) -and (Test-Path $NotesFile)) {
+            gh release create $tag $targetApkPath `
+                --repo "$RepoOwner/$RepoName" `
+                --title $ReleaseTitle `
+                --notes-file $NotesFile
+        } else {
+            gh release create $tag $targetApkPath `
+                --repo "$RepoOwner/$RepoName" `
+                --title $ReleaseTitle `
+                --notes $ReleaseNotes
+        }
+    }
+    Write-Host "`nSuccessfully published GitHub Release $tag!" -ForegroundColor Green
     Write-Host "Direct APK Download URL: https://github.com/$RepoOwner/$RepoName/releases/download/$tag/$targetApkName" -ForegroundColor Cyan
 } else {
     $token = $env:GITHUB_TOKEN

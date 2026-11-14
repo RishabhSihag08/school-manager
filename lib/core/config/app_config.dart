@@ -36,8 +36,8 @@ class AppConfig {
   static const String githubRepo = 'school-manager';
   static const String otaChannel = 'github-releases';
 
-  static String _version = '1.0.11';
-  static int _buildNumber = 11;
+  static String _version = '1.0.12';
+  static int _buildNumber = 12;
 
   static String get currentVersion => _version;
   static int get currentBuildNumber => _buildNumber;
