@@ -153,23 +153,34 @@ if ($ghInstalled) {
         Pop-Location
     }
 
-    $existingRelease = gh release view $tag --repo "$RepoOwner/$RepoName" 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $releaseExists = $false
+    try {
+        $oldEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $null = & gh release view $tag --repo "$RepoOwner/$RepoName" 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $releaseExists = $true
+        }
+    } finally {
+        $ErrorActionPreference = $oldEAP
+    }
+
+    if ($releaseExists) {
         Write-Host "Release $tag already exists. Updating release..." -ForegroundColor Yellow
         if (-not [string]::IsNullOrWhiteSpace($NotesFile) -and (Test-Path $NotesFile)) {
-            gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes-file $NotesFile
+            & gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes-file $NotesFile
         } else {
-            gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes $ReleaseNotes
+            & gh release edit $tag --repo "$RepoOwner/$RepoName" --title $ReleaseTitle --notes $ReleaseNotes
         }
-        gh release upload $tag $targetApkPath --repo "$RepoOwner/$RepoName" --clobber
+        & gh release upload $tag $targetApkPath --repo "$RepoOwner/$RepoName" --clobber
     } else {
         if (-not [string]::IsNullOrWhiteSpace($NotesFile) -and (Test-Path $NotesFile)) {
-            gh release create $tag $targetApkPath `
+            & gh release create $tag $targetApkPath `
                 --repo "$RepoOwner/$RepoName" `
                 --title $ReleaseTitle `
                 --notes-file $NotesFile
         } else {
-            gh release create $tag $targetApkPath `
+            & gh release create $tag $targetApkPath `
                 --repo "$RepoOwner/$RepoName" `
                 --title $ReleaseTitle `
                 --notes $ReleaseNotes
